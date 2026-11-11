@@ -1,0 +1,2812 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta name="description" content="Command fortresses, muster armories, and conquer provinces in Bastion Marshal, a medieval cartographic RTS war game." />
+<title>Bastion Marshal - Medieval Cartographic RTS</title>
+<!-- Official CrazyGames SDK v3 (Safe on local PC & offline) -->
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<style>
+  :root {
+    --parchment-bg: #e6d5b8;
+    --panel-bg: rgba(30, 18, 10, 0.95);
+    --border-gold: #c5a059;
+    --border-dark: #5c3e21;
+    --player-blue: #2563eb;
+    --player-blue-light: #60a5fa;
+    --ai-red: #dc2626;
+    --ai-red-light: #f87171;
+    --neutral-cream: #fef3c7;
+    --gold: #f59e0b;
+  }
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body { height: 100%; margin: 0; background: #0d0704; color: #fef3c7; font-family: "Georgia", "Palatino", serif; overflow: hidden; }
+  #app { display: flex; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 8px; overflow: hidden; }
+  #container { position: relative; width: 100%; max-width: min(1280px, calc((100vh - 16px) * 16 / 9)); max-height: calc(100vh - 16px); aspect-ratio: 16/9; background: #e3d2b4; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.95), 0 0 0 2px var(--border-gold); overflow: hidden; }
+  canvas { width: 100%; height: 100%; display: block; touch-action: none; background: #e8d9bd; }
+
+  /* Lock all UI clicks while an ad auction or video ad is in progress */
+  body.ad-pending .modal,
+  body.ad-pending .overlay-bar,
+  body.ad-pending .ratio-bar {
+    pointer-events: none !important;
+    opacity: 0.85;
+  }
+
+  /* Top Bar */
+  .overlay-bar { position: absolute; left: 0; top: 0; right: 0; pointer-events: none; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; z-index: 10; }
+  .ui-group { display: flex; gap: 8px; align-items: center; pointer-events: auto; flex-wrap: wrap; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; background: #3d2314; border: 1px solid var(--border-gold); border-radius: 6px; color: #fef3c7; cursor: pointer; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; transition: all .15s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.5); text-shadow: 0 1px 2px #000; font-family: inherit; }
+  .btn:hover { background: #5a351f; border-color: #ffd700; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.7); }
+  .btn:active { transform: translateY(0); }
+  .btn-accent { background: #1e3a8a; border-color: #93c5fd; }
+  .btn-accent:hover { background: #2563eb; }
+  .btn-danger { background: #7f1d1d; border-color: #fca5a5; }
+  .btn-gold { background: #92400e; border-color: #fde68a; color: #fff; }
+  .btn-gold:hover { background: #b45309; }
+
+  /* Tactile Pressed & Active State */
+  .btn.active {
+    background: #1e3a8a !important;
+    border-color: #93c5fd !important;
+    color: #ffffff !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 0 10px rgba(96,165,250,0.5) !important;
+    transform: translateY(1px);
+  }
+
+  .badge { background: rgba(30, 16, 8, 0.9); border: 1px solid var(--border-gold); padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 700; display: flex; gap: 10px; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+  .badge .blue { color: var(--player-blue-light); }
+  .badge .red { color: var(--ai-red-light); }
+  .badge .neutral { color: var(--neutral-cream); }
+
+  /* Troop Dispatch Percentage Bar (Player: 25%, 50%, 75%) */
+  .ratio-bar { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: auto; background: var(--panel-bg); padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border-gold); display: flex; gap: 6px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,0.8); }
+  .ratio-label { font-size: 11px; font-weight: 700; color: #d4b996; text-transform: uppercase; margin-right: 4px; }
+  .ratio-btn { padding: 6px 12px; font-size: 12px; border-radius: 4px; background: #26150b; border: 1px solid var(--border-dark); color: #d4b996; cursor: pointer; font-weight: 700; font-family: inherit; transition: all .15s; }
+  .ratio-btn:hover { color: #fff; border-color: var(--border-gold); }
+  .ratio-btn.active { background: #2563eb; color: #fff; border-color: #93c5fd; box-shadow: 0 0 10px rgba(37,99,235,0.6); font-weight: 800; }
+
+  /* Modals */
+  .modal-overlay { position: absolute; inset: 0; background: rgba(15, 8, 4, 0.85); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 20; }
+  .modal { background: var(--panel-bg); border: 2px solid var(--border-gold); border-radius: 10px; padding: 24px; width: min(620px, 92%); max-height: 90%; overflow-y: auto; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.95); }
+  .modal h1 { margin: 0 0 4px; font-size: 32px; letter-spacing: 2px; color: #ffd700; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  .modal p { margin: 0 0 16px; color: #d4b996; font-size: 14px; font-style: italic; }
+
+  /* Campaign Top Header Bar */
+  .campaign-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(197, 160, 89, 0.25);
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Campaign Level Cards */
+  .level-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin: 14px 0 6px; text-align: left; }
+  .level-card { background: #26150b; border: 1px solid var(--border-dark); border-radius: 6px; padding: 12px; cursor: pointer; transition: all .15s; position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 118px; }
+  .level-card:hover { transform: translateY(-2px); border-color: var(--border-gold); background: #381f10; box-shadow: 0 4px 14px rgba(0,0,0,0.6); }
+  .level-card.locked { opacity: 0.78; border-style: dashed; background: #1c1008; }
+  .level-card.locked:hover { border-color: #f59e0b; background: #2b180c; }
+  .level-meta { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .card-pill { font-size: 9.5px; padding: 2px 6px; border-radius: 3px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+  .pill-act { background: #3a2213; border: 1px solid #7c4d28; color: #f6d289; }
+  .pill-tactical { background: #172554; border: 1px solid #3b82f6; color: #93c5fd; }
+  .pill-grandmaster { background: #450a0a; border: 1px solid #ef4444; color: #fca5a5; }
+  .pill-checkpoint { background: #064e3b; border: 1px solid #10b981; color: #a7f3d0; }
+  .level-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(197, 160, 89, 0.15); }
+  .level-targets { font-size: 10px; color: #a89078; font-family: monospace; }
+  .unlock-ad-pill { font-size: 10px; color: #fde68a; background: #78350f; border: 1px solid #f59e0b; padding: 2px 7px; border-radius: 4px; font-weight: 700; }
+  .locked-req-pill { font-size: 10px; color: #a89078; font-style: italic; }
+  .act-tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .act-tab-btn { padding: 6px 12px; font-size: 11.5px; }
+  .level-title { font-size: 14px; font-weight: 700; color: #ffd700; display: flex; justify-content: space-between; align-items: center; }
+  .level-desc { font-size: 11px; color: #c4ab8a; margin-top: 4px; line-height: 1.3; }
+  .stars { color: #f59e0b; font-size: 13px; }
+
+  .legend-row { display: flex; justify-content: center; gap: 18px; margin: 12px 0 18px; font-size: 12px; color: #d4b996; font-weight: 700; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  .mode-grid { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin: 0 auto; }
+  .env-status { margin-top: 14px; font-size: 11px; color: #a89078; letter-spacing: 0.3px; }
+
+  /* Non-blocking Toast Banner */
+  .toast-banner {
+    position: absolute;
+    bottom: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(25, 12, 5, 0.96);
+    border: 1.5px solid #f59e0b;
+    color: #fde68a;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    z-index: 50;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.85);
+    pointer-events: none;
+    display: none;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 900px), (max-height: 500px) {
+    .overlay-bar { padding: 6px 10px; }
+    .btn { padding: 5px 9px; font-size: 11px; }
+    .badge { padding: 4px 8px; font-size: 11px; }
+    .ratio-bar { bottom: 6px; padding: 3px 8px; }
+    .ratio-btn { padding: 4px 8px; font-size: 11px; }
+    .modal { padding: 14px; }
+    .modal h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="container">
+    <canvas id="canvas"></canvas>
+
+    <!-- Toast Notification Banner -->
+    <div id="toastBanner" class="toast-banner"></div>
+
+    <!-- Top In-Game Overlay Bar -->
+    <div class="overlay-bar">
+      <div class="ui-group">
+        <button id="menuBtn" class="btn" style="display:none;">◀ War Map</button>
+        <button id="resetBtn" class="btn btn-accent" style="display:none;" title="Restart Battle (Hotkey: R)">⟲ Reset</button>
+        <div class="badge" id="modeBadge">The Realm</div>
+      </div>
+      <div class="ui-group">
+        <div class="badge" id="statsBadge">
+          <span class="blue">🏰 <b id="blueCount">0</b></span>
+          <span class="red">⚔️ <b id="redCount">0</b></span>
+          <span class="neutral">⚪ <b id="whiteCount">0</b></span>
+        </div>
+        <div class="badge" id="timerBadge">⏱️ <b id="timer">00:00</b></div>
+        <button id="speedBtn" class="btn" style="display:none;" title="Toggle Battle Speed">⏩ 1x</button>
+        <button id="soundBtn" class="btn" title="Toggle Sound">🔊</button>
+        <button id="fullscreenBtn" class="btn" title="Toggle Fullscreen (PC Only)">⛶</button>
+        <button id="pauseBtn" class="btn" style="display:none;">Pause</button>
+      </div>
+    </div>
+
+    <!-- Troop Dispatch Percentage Selector -->
+    <div class="ratio-bar" id="ratioBar" style="display:none;">
+      <span class="ratio-label">Army Levy:</span>
+      <div id="ratioBtnContainer" style="display:flex; gap:4px;"></div>
+    </div>
+
+    <!-- Main Menu Modal -->
+    <div class="modal-overlay" id="mainMenu">
+      <div class="modal">
+        <h1>BASTION MARSHAL</h1>
+        <p>A Cartographic RTS of Fortresses, Armories & Conquest</p>
+
+        <div class="legend-row">
+          <div class="legend-item">🛡️ <b>Fortress:</b> 0.5x Dmg Taken, 1x Rate</div>
+          <div class="legend-item">⚔️ <b>Armory:</b> 1x Dmg Taken, 2x Rate</div>
+          <div class="legend-item">🏛️ <b>Town:</b> 1x Dmg Taken, 1x Rate</div>
+        </div>
+
+        <div class="mode-grid" id="mainModeList"></div>
+        <div class="env-status" id="envStatusBadge">🖥️ Initializing Realm...</div>
+      </div>
+    </div>
+
+    <!-- Campaign Map Selector Modal -->
+    <div class="modal-overlay" id="campaignMenu" style="display:none;">
+      <div class="modal" style="width:min(860px, 95%);">
+        <div class="campaign-top-bar">
+          <button class="btn" id="campaignBack">◀ Back to Menu</button>
+          <div class="badge" id="totalStarsBadge" style="font-size:12px; padding:6px 12px;">
+            ⭐ <span>Realm Stars: <b id="totalStarsCount" style="color:#f59e0b;">0</b> / 60</span>
+          </div>
+          <button class="btn btn-danger" id="resetProgressBtn" style="font-size:11.5px;">🗑️ Reset Stars</button>
+        </div>
+
+        <h1>CAMPAIGN CHRONICLES</h1>
+        <p>20 Provinces Across the Realm • Acts I, II & III Unlocked as Checkpoints</p>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div style="display:flex; gap:4px; align-items:center;">
+            <button class="btn camp-diff-btn active" data-diff="tactical" style="padding:5px 10px; font-size:11px;" title="Humane AI & Player Boost">⚔️ Tactical (Humane)</button>
+            <button class="btn camp-diff-btn" data-diff="grandmaster" style="padding:5px 10px; font-size:11px;" title="Unforgiving Math AI">💀 Grandmaster (Hardcore)</button>
+          </div>
+          <div class="act-tabs" id="actTabs">
+            <button class="btn act-tab-btn active" data-act="all">All (20)</button>
+            <button class="btn act-tab-btn" data-act="1">🌲 Act I (1-6)</button>
+            <button class="btn act-tab-btn" data-act="2">🏔️ Act II (7-13)</button>
+            <button class="btn act-tab-btn" data-act="3">👑 Act III (14-20)</button>
+          </div>
+        </div>
+
+        <div class="level-grid" id="levelGrid"></div>
+      </div>
+    </div>
+
+    <!-- Custom Battle Setup Modal -->
+    <div class="modal-overlay" id="skirmishMenu" style="display:none;">
+      <div class="modal">
+        <h1>CUSTOM BATTLE</h1>
+        <p>Dynamic Battlefield Generator • Choose Province & Intellect</p>
+
+        <div style="display:flex; flex-direction:column; gap:14px; text-align:left; margin:16px auto; max-width:380px;">
+          <div>
+            <label style="font-size:11px; color:#d4b996; font-weight:700; text-transform:uppercase;">Battlefield Province</label>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <button class="btn skirmish-map-btn" data-map="map1" style="flex:1;">🌲 Riverlands</button>
+              <button class="btn skirmish-map-btn active" data-map="map2" style="flex:1;">🏔️ Mountain Pass</button>
+              <button class="btn skirmish-map-btn" data-map="map3" style="flex:1;">👑 Imperial Realm</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px; color:#d4b996; font-weight:700; text-transform:uppercase;">Enemy AI Intellect</label>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <button class="btn ai-diff-btn active" data-diff="tactical" style="flex:1;">⚔️ Tactical (Humane)</button>
+              <button class="btn ai-diff-btn" data-diff="grandmaster" style="flex:1;">💀 Grandmaster (Hardcore)</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px; color:#d4b996; font-weight:700; text-transform:uppercase;">Settlement Density</label>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <button class="btn map-size-btn" data-nodes="8" style="flex:1;">Frontier (8)</button>
+              <button class="btn map-size-btn active" data-nodes="14" style="flex:1;">Realm (14)</button>
+              <button class="btn map-size-btn" data-nodes="20" style="flex:1;">Kingdom (20)</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:10px; margin-top:18px;">
+          <button class="btn" id="skirmishBack">◀ Back</button>
+          <button class="btn btn-accent" id="skirmishStart" style="padding:9px 24px;">Start Battle ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- How to Play / Field Guide Modal -->
+    <div class="modal-overlay" id="helpModal" style="display:none;">
+      <div class="modal" style="width:min(640px, 92%); text-align:left;">
+        <h1 style="text-align:center;">HOW TO PLAY</h1>
+        <p style="text-align:center;">Commander's Field Guide</p>
+
+        <div style="display:flex; flex-direction:column; gap:12px; font-size:13px; line-height:1.5; color:#fef3c7;">
+          <div style="background:#26150b; border:1px solid var(--border-dark); border-radius:6px; padding:10px 14px;">
+            <b style="color:#ffd700;">⚔️ Marching Armies:</b>
+            <div style="color:#d4b996; margin-top:2px;">Click & drag from your blue settlement to any base to dispatch troops. Drag across multiple strongholds to coordinate a mass assault!</div>
+          </div>
+
+          <div style="background:#26150b; border:1px solid var(--border-dark); border-radius:6px; padding:10px 14px;">
+            <b style="color:#ffd700;">🏰 Stronghold Types & Garrison Cap:</b>
+            <div style="display:grid; grid-template-columns:1fr; gap:6px; margin-top:6px; color:#d4b996;">
+              <div>🏛️ <b style="color:#fef3c7;">Town:</b> Standard troop recruitment (1× rate, 1× damage taken).</div>
+              <div>⚔️ <b style="color:#fef3c7;">Armory:</b> High-speed training grounds (<b>2× recruitment rate</b>). Seize these early!</div>
+              <div>🛡️ <b style="color:#fef3c7;">Fortress:</b> Heavy citadel (<b>takes only 0.5× damage</b>). Defenders have 2× effective health.</div>
+              <div>🚩 <b style="color:#fef3c7;">Garrison Cap:</b> Strongholds hold <b>200 to 500 troops</b> depending on polygon size before natural recruitment pauses at <b>MAX</b>.</div>
+            </div>
+          </div>
+
+          <div style="background:#26150b; border:1px solid var(--border-dark); border-radius:6px; padding:10px 14px;">
+            <b style="color:#ffd700;">⌨️ Hotkeys & Controls:</b>
+            <div style="color:#d4b996; margin-top:2px;">
+              • <b>1 / 2 / 3:</b> Set army levy ratio (25%, 50%, 75%).<br>
+              • <b>Space:</b> Select ALL your blue strongholds at once.<br>
+              • <b>R:</b> Quick restart current battle.<br>
+              • <b>Esc / P:</b> Pause battle.
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center; margin-top:18px;">
+          <button class="btn btn-accent" id="helpCloseBtn" style="padding:8px 26px;">Got It, Commander!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Modal -->
+    <div class="modal-overlay" id="pauseModal" style="display:none;">
+      <div class="modal" style="max-width:380px;">
+        <h1>PAUSED</h1>
+        <p>The battle is suspended</p>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+          <button class="btn btn-accent" id="resumeBtn" style="padding:10px;">▶ Resume Battle</button>
+          <button class="btn" id="pauseRestartBtn" style="padding:10px;">⟲ Replay Same Map</button>
+          <button class="btn btn-gold" id="pauseNewRandomBtn" style="padding:10px; display:none;">🎲 New Random Map</button>
+          <button class="btn" id="pauseSetupBtn" style="padding:10px; display:none;">⚙️ Battle Setup</button>
+          <button class="btn" id="pauseHelpBtn" style="padding:10px;">📜 Field Guide</button>
+          <button class="btn" id="pauseMenuBtn" style="padding:10px;">◀ Exit to Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Victory / Defeat Modal -->
+    <div class="modal-overlay" id="endModal" style="display:none;">
+      <div class="modal">
+        <h1 id="endTitle">VICTORY</h1>
+        <p id="endSubtitle">The Realm is under your banner</p>
+        <div id="starAward" style="font-size:28px; margin-bottom:12px; color:#f59e0b;">★★★</div>
+        <div class="badge" style="display:inline-flex; margin-bottom:18px;" id="endStats">Time: 00:45</div>
+        <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+          <button class="btn" id="endMenuBtn">◀ War Map</button>
+          <button class="btn" id="endSetupBtn" style="display:none;">⚙️ Battle Setup</button>
+          <button class="btn btn-accent" id="endRetryBtn">⟲ Fight Again</button>
+          <button class="btn btn-gold" id="endNewRandomBtn" style="display:none;">🎲 New Random Battle ▶</button>
+          <button class="btn btn-accent" id="endNextBtn" style="display:none;">Next Province ▶</button>
+        </div>
+        <div id="rewardContainer" style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(197, 160, 89, 0.25);">
+          <button class="btn" id="endRewardVanguardBtn" style="background:#b45309; border-color:#f59e0b; font-size:12px; padding:8px 18px;">
+            🎬 Rally Vanguard (+25% Starting Troops)
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(() => {
+  // =================================================================
+  // 1. CONFIGURATION & EXACT NODE STATS
+  // =================================================================
+
+  const DISPATCH_OPTIONS = [
+    { label: '25% (1)', value: 0.25 },
+    { label: '50% (2)', value: 0.50 },
+    { label: '75% (3)', value: 0.75 }
+  ];
+
+  const NODE_TYPES = {
+    TOWN: { name: 'Town', icon: '🏛️', regen: 1.0, damageTaken: 1.0, bannerColor: '#5c3e21' },
+    FORTRESS: { name: 'Fortress', icon: '🛡️', regen: 1.0, damageTaken: 0.5, bannerColor: '#b45309' },
+    ARMORY: { name: 'Armory', icon: '⚔️', regen: 2.0, damageTaken: 1.0, bannerColor: '#c2410c' }
+  };
+
+  const ACT_CHECKPOINT_INDICES = new Set([0, 6, 13]);
+
+  function calculatePolygonMaxCap(radius) {
+    const rClamped = Math.max(24, Math.min(54, radius));
+    const ratio = (rClamped - 24) / (54 - 24);
+    return Math.round(200 + ratio * 300);
+  }
+
+  const CAMPAIGN_LEVELS = [
+    {
+      id: 'level-1',
+      title: '1. The River Crossing',
+      act: 1, actName: 'Riverlands', actIcon: '🌲', map: 'map1',
+      desc: 'Capture the neutral river towns and consolidate your vanguard.',
+      starTimes: [35, 55],
+      setup: () => [
+        { x: 190, y: 360, r: 36, owner: 'blue', troops: 60, type: 'ARMORY' },
+        { x: 1090, y: 360, r: 36, owner: 'red', troops: 60, type: 'TOWN' },
+        { x: 490, y: 230, r: 28, owner: 'grey', troops: 15, type: 'TOWN' },
+        { x: 490, y: 490, r: 28, owner: 'grey', troops: 15, type: 'TOWN' },
+        { x: 790, y: 230, r: 28, owner: 'grey', troops: 15, type: 'TOWN' },
+        { x: 790, y: 490, r: 28, owner: 'grey', troops: 15, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-2',
+      title: '2. Vallis Portus Citadel',
+      act: 1, actName: 'Riverlands', actIcon: '🌲', map: 'map1',
+      desc: 'A neutral Fortress guards the water passage between both hosts.',
+      starTimes: [40, 65],
+      setup: () => [
+        { x: 160, y: 360, r: 38, owner: 'blue', troops: 85, type: 'TOWN' },
+        { x: 1120, y: 360, r: 38, owner: 'red', troops: 80, type: 'TOWN' },
+        { x: 640, y: 360, r: 48, owner: 'grey', troops: 28, type: 'FORTRESS' },
+        { x: 640, y: 160, r: 30, owner: 'grey', troops: 16, type: 'ARMORY' },
+        { x: 640, y: 560, r: 30, owner: 'grey', troops: 16, type: 'ARMORY' }
+      ]
+    },
+    {
+      id: 'level-3',
+      title: '3. Armory of the Reach',
+      act: 1, actName: 'Riverlands', actIcon: '🌲', map: 'map1',
+      desc: 'Race to secure two high-speed Armories before the enemy occupies them.',
+      starTimes: [45, 75],
+      setup: () => [
+        { x: 160, y: 180, r: 32, owner: 'blue', troops: 65, type: 'TOWN' },
+        { x: 1120, y: 540, r: 32, owner: 'red', troops: 60, type: 'TOWN' },
+        { x: 380, y: 240, r: 26, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 420, y: 480, r: 26, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 860, y: 240, r: 26, owner: 'grey', troops: 25, type: 'TOWN' },
+        { x: 900, y: 480, r: 26, owner: 'grey', troops: 25, type: 'TOWN' },
+        { x: 640, y: 200, r: 34, owner: 'grey', troops: 28, type: 'ARMORY' },
+        { x: 640, y: 520, r: 34, owner: 'grey', troops: 28, type: 'ARMORY' }
+      ]
+    },
+    {
+      id: 'level-4',
+      title: '4. The Bastion Holdout',
+      act: 1, actName: 'Riverlands', actIcon: '🌲', map: 'map1',
+      desc: 'Your single heavy Fortress withstands 4 fast-producing enemy Towns.',
+      starTimes: [50, 80],
+      setup: () => [
+        { x: 220, y: 360, r: 54, owner: 'blue', troops: 180, type: 'FORTRESS' },
+        { x: 1000, y: 160, r: 24, owner: 'red', troops: 30, type: 'TOWN' },
+        { x: 1120, y: 290, r: 24, owner: 'red', troops: 30, type: 'TOWN' },
+        { x: 1120, y: 430, r: 24, owner: 'red', troops: 30, type: 'TOWN' },
+        { x: 1000, y: 560, r: 24, owner: 'red', troops: 30, type: 'TOWN' },
+        { x: 600, y: 220, r: 32, owner: 'grey', troops: 30, type: 'ARMORY' },
+        { x: 600, y: 500, r: 32, owner: 'grey', troops: 30, type: 'ARMORY' }
+      ]
+    },
+    {
+      id: 'level-5',
+      title: '5. Twin Fortresses',
+      act: 1, actName: 'Riverlands', actIcon: '🌲', map: 'map1',
+      desc: 'Two heavy defensive pivots protect the central armories.',
+      starTimes: [40, 70],
+      setup: () => [
+        { x: 180, y: 360, r: 36, owner: 'blue', troops: 85, type: 'TOWN' },
+        { x: 1100, y: 360, r: 36, owner: 'red', troops: 80, type: 'TOWN' },
+        { x: 440, y: 360, r: 36, owner: 'grey', troops: 22, type: 'FORTRESS' },
+        { x: 840, y: 360, r: 36, owner: 'grey', troops: 22, type: 'FORTRESS' },
+        { x: 640, y: 200, r: 34, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 640, y: 520, r: 34, owner: 'grey', troops: 25, type: 'ARMORY' }
+      ]
+    },
+    {
+      id: 'level-6',
+      title: '6. The Iron Line',
+      act: 1, actName: 'Riverlands', actIcon: '🌲', map: 'map1',
+      desc: 'Heavily fortified enemy compounds that require overwhelming numbers.',
+      starTimes: [60, 95],
+      setup: () => [
+        { x: 180, y: 200, r: 34, owner: 'blue', troops: 80, type: 'ARMORY' },
+        { x: 180, y: 520, r: 34, owner: 'blue', troops: 80, type: 'ARMORY' },
+        { x: 1100, y: 200, r: 38, owner: 'red', troops: 75, type: 'FORTRESS' },
+        { x: 1100, y: 520, r: 38, owner: 'red', troops: 75, type: 'FORTRESS' },
+        { x: 640, y: 360, r: 42, owner: 'grey', troops: 35, type: 'FORTRESS' },
+        { x: 460, y: 360, r: 26, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 820, y: 360, r: 26, owner: 'grey', troops: 20, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-7',
+      title: '7. The Grand Crucible',
+      act: 2, actName: 'Mountain Pass', actIcon: '🏔️', map: 'map2',
+      desc: 'A rich valley filled with multiple Armories and a central Bastion.',
+      starTimes: [55, 90],
+      setup: () => [
+        { x: 150, y: 360, r: 38, owner: 'blue', troops: 110, type: 'ARMORY' },
+        { x: 290, y: 360, r: 28, owner: 'blue', troops: 40, type: 'TOWN' },
+        { x: 1130, y: 360, r: 36, owner: 'red', troops: 85, type: 'ARMORY' },
+        { x: 440, y: 180, r: 28, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 440, y: 540, r: 28, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 900, y: 180, r: 28, owner: 'grey', troops: 22, type: 'TOWN' },
+        { x: 900, y: 540, r: 28, owner: 'grey', troops: 22, type: 'TOWN' },
+        { x: 640, y: 200, r: 34, owner: 'grey', troops: 22, type: 'ARMORY' },
+        { x: 640, y: 520, r: 34, owner: 'grey', troops: 22, type: 'ARMORY' },
+        { x: 640, y: 360, r: 46, owner: 'grey', troops: 35, type: 'FORTRESS' }
+      ]
+    },
+    {
+      id: 'level-8',
+      title: '8. Battle for the Crown',
+      act: 2, actName: 'Mountain Pass', actIcon: '🏔️', map: 'map2',
+      desc: 'A fierce confrontation for the heart of the pass.',
+      starTimes: [70, 110],
+      setup: () => [
+        { x: 140, y: 180, r: 36, owner: 'blue', troops: 100, type: 'ARMORY' },
+        { x: 140, y: 540, r: 36, owner: 'blue', troops: 100, type: 'FORTRESS' },
+        { x: 1140, y: 180, r: 34, owner: 'red', troops: 75, type: 'FORTRESS' },
+        { x: 1140, y: 540, r: 34, owner: 'red', troops: 75, type: 'ARMORY' },
+        { x: 440, y: 360, r: 36, owner: 'grey', troops: 20, type: 'FORTRESS' },
+        { x: 840, y: 360, r: 36, owner: 'grey', troops: 22, type: 'FORTRESS' },
+        { x: 640, y: 160, r: 30, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 640, y: 560, r: 30, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 640, y: 360, r: 50, owner: 'grey', troops: 30, type: 'ARMORY' }
+      ]
+    },
+    {
+      id: 'level-9',
+      title: '9. The Whispering Defile',
+      act: 2, actName: 'Mountain Pass', actIcon: '🏔️', map: 'map2',
+      desc: 'Navigate a mountain gorge where neutral outposts guard upper and lower ridges.',
+      starTimes: [50, 80],
+      setup: () => [
+        { x: 160, y: 360, r: 36, owner: 'blue', troops: 80, type: 'TOWN' },
+        { x: 1120, y: 360, r: 36, owner: 'red', troops: 75, type: 'TOWN' },
+        { x: 400, y: 180, r: 26, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 640, y: 170, r: 32, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 880, y: 180, r: 26, owner: 'grey', troops: 25, type: 'TOWN' },
+        { x: 640, y: 360, r: 44, owner: 'grey', troops: 38, type: 'FORTRESS' },
+        { x: 400, y: 540, r: 26, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 640, y: 550, r: 32, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 880, y: 540, r: 26, owner: 'grey', troops: 25, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-10',
+      title: '10. Caverns of Steel',
+      act: 2, actName: 'Mountain Pass', actIcon: '🏔️', map: 'map2',
+      desc: 'Four rapid Armories form the spine of the pass. Seize the production hub before enemy forces swarm.',
+      starTimes: [55, 85],
+      setup: () => [
+        { x: 160, y: 240, r: 38, owner: 'blue', troops: 80, type: 'FORTRESS' },
+        { x: 160, y: 480, r: 34, owner: 'blue', troops: 65, type: 'ARMORY' },
+        { x: 1120, y: 480, r: 38, owner: 'red', troops: 75, type: 'FORTRESS' },
+        { x: 1120, y: 240, r: 32, owner: 'red', troops: 50, type: 'TOWN' },
+        { x: 640, y: 180, r: 32, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 640, y: 540, r: 32, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 480, y: 360, r: 32, owner: 'grey', troops: 22, type: 'ARMORY' },
+        { x: 800, y: 360, r: 32, owner: 'grey', troops: 28, type: 'ARMORY' },
+        { x: 330, y: 360, r: 26, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 950, y: 360, r: 26, owner: 'grey', troops: 20, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-11',
+      title: '11. The Pincer Ambush',
+      act: 2, actName: 'Mountain Pass', actIcon: '🏔️', map: 'map2',
+      desc: 'Enemy vanguard forces surround your fortress from high cliffs. Break out to the flank settlements!',
+      starTimes: [50, 85],
+      setup: () => [
+        { x: 640, y: 360, r: 52, owner: 'blue', troops: 195, type: 'FORTRESS' },
+        { x: 640, y: 150, r: 34, owner: 'red', troops: 50, type: 'ARMORY' },
+        { x: 640, y: 570, r: 34, owner: 'red', troops: 50, type: 'TOWN' },
+        { x: 240, y: 220, r: 32, owner: 'grey', troops: 15, type: 'ARMORY' },
+        { x: 240, y: 500, r: 30, owner: 'grey', troops: 18, type: 'FORTRESS' },
+        { x: 1040, y: 220, r: 30, owner: 'grey', troops: 25, type: 'FORTRESS' },
+        { x: 1040, y: 500, r: 32, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 420, y: 360, r: 26, owner: 'grey', troops: 12, type: 'TOWN' },
+        { x: 860, y: 360, r: 26, owner: 'grey', troops: 15, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-12',
+      title: '12. Citadel of the Frozen Pass',
+      act: 2, actName: 'Mountain Pass', actIcon: '🏔️', map: 'map2',
+      desc: 'A neutral Citadel locks the passage. Overcome its defenders or starve it through encirclement.',
+      starTimes: [65, 105],
+      setup: () => [
+        { x: 160, y: 200, r: 34, owner: 'blue', troops: 90, type: 'TOWN' },
+        { x: 160, y: 520, r: 34, owner: 'blue', troops: 90, type: 'ARMORY' },
+        { x: 1120, y: 200, r: 34, owner: 'red', troops: 65, type: 'ARMORY' },
+        { x: 1120, y: 520, r: 34, owner: 'red', troops: 65, type: 'TOWN' },
+        { x: 640, y: 360, r: 52, owner: 'grey', troops: 25, type: 'FORTRESS' },
+        { x: 420, y: 360, r: 32, owner: 'grey', troops: 14, type: 'ARMORY' },
+        { x: 860, y: 360, r: 30, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 640, y: 160, r: 28, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 640, y: 560, r: 28, owner: 'grey', troops: 16, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-13',
+      title: '13. Thunder Ridge',
+      act: 2, actName: 'Mountain Pass', actIcon: '🏔️', map: 'map2',
+      desc: 'A jagged ridge with 11 strategic settlements. Total coordination is required to hold the high ground.',
+      starTimes: [65, 100],
+      setup: () => [
+        { x: 150, y: 360, r: 40, owner: 'blue', troops: 95, type: 'FORTRESS' },
+        { x: 260, y: 200, r: 30, owner: 'blue', troops: 50, type: 'ARMORY' },
+        { x: 260, y: 520, r: 28, owner: 'blue', troops: 45, type: 'TOWN' },
+        { x: 1130, y: 360, r: 40, owner: 'red', troops: 80, type: 'FORTRESS' },
+        { x: 1020, y: 200, r: 28, owner: 'red', troops: 40, type: 'TOWN' },
+        { x: 1020, y: 520, r: 30, owner: 'red', troops: 40, type: 'ARMORY' },
+        { x: 640, y: 360, r: 46, owner: 'grey', troops: 40, type: 'FORTRESS' },
+        { x: 640, y: 180, r: 34, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 640, y: 540, r: 34, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 450, y: 360, r: 28, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 830, y: 360, r: 28, owner: 'grey', troops: 18, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-14',
+      title: '14. The Royal Causeway',
+      act: 3, actName: 'Imperial Realm', actIcon: '👑', map: 'map3',
+      desc: 'Enter the Imperial Realm along the grand causeway lined with wealthy ducal armories.',
+      starTimes: [50, 80],
+      setup: () => [
+        { x: 160, y: 360, r: 42, owner: 'blue', troops: 95, type: 'ARMORY' },
+        { x: 1120, y: 360, r: 42, owner: 'red', troops: 80, type: 'FORTRESS' },
+        { x: 380, y: 230, r: 28, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 380, y: 490, r: 28, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 640, y: 200, r: 34, owner: 'grey', troops: 28, type: 'ARMORY' },
+        { x: 640, y: 520, r: 34, owner: 'grey', troops: 28, type: 'ARMORY' },
+        { x: 900, y: 230, r: 30, owner: 'grey', troops: 22, type: 'FORTRESS' },
+        { x: 900, y: 490, r: 30, owner: 'grey', troops: 22, type: 'FORTRESS' },
+        { x: 640, y: 360, r: 30, owner: 'grey', troops: 20, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-15',
+      title: "15. The Dragon's Maw",
+      act: 3, actName: 'Imperial Realm', actIcon: '👑', map: 'map3',
+      desc: 'Red forces hold an ominous crescent arc around fertile plains. Break through their flanks.',
+      starTimes: [60, 95],
+      setup: () => [
+        { x: 150, y: 360, r: 42, owner: 'blue', troops: 115, type: 'FORTRESS' },
+        { x: 150, y: 180, r: 34, owner: 'blue', troops: 60, type: 'ARMORY' },
+        { x: 150, y: 540, r: 30, owner: 'blue', troops: 50, type: 'TOWN' },
+        { x: 1080, y: 180, r: 34, owner: 'red', troops: 50, type: 'ARMORY' },
+        { x: 1140, y: 360, r: 42, owner: 'red', troops: 70, type: 'FORTRESS' },
+        { x: 1080, y: 540, r: 30, owner: 'red', troops: 50, type: 'TOWN' },
+        { x: 380, y: 240, r: 26, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 380, y: 480, r: 26, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 580, y: 360, r: 38, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 840, y: 200, r: 28, owner: 'grey', troops: 22, type: 'TOWN' },
+        { x: 840, y: 520, r: 28, owner: 'grey', troops: 22, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-16',
+      title: '16. Four Corners of War',
+      act: 3, actName: 'Imperial Realm', actIcon: '👑', map: 'map3',
+      desc: 'Forces clash diagonally across four corners of the realm. Watch your flanks at all times.',
+      starTimes: [65, 105],
+      setup: () => [
+        { x: 180, y: 180, r: 38, owner: 'blue', troops: 95, type: 'ARMORY' },
+        { x: 1100, y: 540, r: 38, owner: 'blue', troops: 95, type: 'FORTRESS' },
+        { x: 180, y: 540, r: 38, owner: 'red', troops: 68, type: 'FORTRESS' },
+        { x: 1100, y: 180, r: 38, owner: 'red', troops: 68, type: 'ARMORY' },
+        { x: 640, y: 360, r: 46, owner: 'grey', troops: 22, type: 'FORTRESS' },
+        { x: 640, y: 160, r: 28, owner: 'grey', troops: 15, type: 'TOWN' },
+        { x: 640, y: 560, r: 28, owner: 'grey', troops: 15, type: 'TOWN' },
+        { x: 380, y: 360, r: 28, owner: 'grey', troops: 14, type: 'TOWN' },
+        { x: 900, y: 360, r: 28, owner: 'grey', troops: 18, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-17',
+      title: '17. The Iron Bastion',
+      act: 3, actName: 'Imperial Realm', actIcon: '👑', map: 'map3',
+      desc: 'An enemy super-bastion is locked in the eastern redoubt. Seize the peripheral armories to cut its power!',
+      starTimes: [75, 120],
+      setup: () => [
+        { x: 920, y: 360, r: 46, owner: 'red', troops: 75, type: 'FORTRESS' },
+        { x: 1140, y: 360, r: 28, owner: 'red', troops: 30, type: 'TOWN' },
+        { x: 1100, y: 190, r: 28, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 1100, y: 530, r: 28, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 160, y: 220, r: 36, owner: 'blue', troops: 95, type: 'FORTRESS' },
+        { x: 160, y: 500, r: 36, owner: 'blue', troops: 95, type: 'ARMORY' },
+        { x: 390, y: 180, r: 30, owner: 'grey', troops: 18, type: 'ARMORY' },
+        { x: 390, y: 540, r: 30, owner: 'grey', troops: 18, type: 'ARMORY' },
+        { x: 420, y: 360, r: 32, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 650, y: 220, r: 28, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 650, y: 500, r: 28, owner: 'grey', troops: 20, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-18',
+      title: "18. Archon's Labyrinth",
+      act: 3, actName: 'Imperial Realm', actIcon: '👑', map: 'map3',
+      desc: 'A complex web of 12 fortified towns and armories. Precision troop distribution is essential.',
+      starTimes: [70, 115],
+      setup: () => [
+        { x: 150, y: 180, r: 36, owner: 'blue', troops: 90, type: 'FORTRESS' },
+        { x: 150, y: 540, r: 36, owner: 'blue', troops: 90, type: 'ARMORY' },
+        { x: 1130, y: 180, r: 34, owner: 'red', troops: 70, type: 'ARMORY' },
+        { x: 1130, y: 540, r: 34, owner: 'red', troops: 70, type: 'FORTRESS' },
+        { x: 400, y: 180, r: 28, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 400, y: 360, r: 32, owner: 'grey', troops: 20, type: 'ARMORY' },
+        { x: 400, y: 540, r: 28, owner: 'grey', troops: 16, type: 'TOWN' },
+        { x: 640, y: 200, r: 38, owner: 'grey', troops: 24, type: 'FORTRESS' },
+        { x: 640, y: 520, r: 38, owner: 'grey', troops: 24, type: 'FORTRESS' },
+        { x: 880, y: 180, r: 28, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 880, y: 360, r: 32, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 880, y: 540, r: 28, owner: 'grey', troops: 20, type: 'TOWN' }
+      ]
+    },
+    {
+      id: 'level-19',
+      title: '19. The Vanguard Breach',
+      act: 3, actName: 'Imperial Realm', actIcon: '👑', map: 'map3',
+      desc: 'Breach outer defenses before Red reinforcement column rallies from the imperial stronghold.',
+      starTimes: [65, 105],
+      setup: () => [
+        { x: 160, y: 360, r: 44, owner: 'blue', troops: 115, type: 'ARMORY' },
+        { x: 280, y: 190, r: 32, owner: 'blue', troops: 55, type: 'TOWN' },
+        { x: 280, y: 530, r: 32, owner: 'blue', troops: 55, type: 'TOWN' },
+        { x: 1120, y: 360, r: 48, owner: 'red', troops: 100, type: 'FORTRESS' },
+        { x: 990, y: 190, r: 32, owner: 'red', troops: 45, type: 'ARMORY' },
+        { x: 990, y: 530, r: 32, owner: 'red', troops: 45, type: 'TOWN' },
+        { x: 470, y: 360, r: 34, owner: 'grey', troops: 25, type: 'FORTRESS' },
+        { x: 810, y: 360, r: 34, owner: 'grey', troops: 25, type: 'FORTRESS' },
+        { x: 640, y: 180, r: 30, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 640, y: 540, r: 30, owner: 'grey', troops: 20, type: 'TOWN' },
+        { x: 640, y: 360, r: 38, owner: 'grey', troops: 35, type: 'ARMORY' }
+      ]
+    },
+    {
+      id: 'level-20',
+      title: "20. The Emperor's Final Stand",
+      act: 3, actName: 'Imperial Realm', actIcon: '👑', map: 'map3',
+      desc: 'The Grand Climax. The Crimson Emperor defends the Throne of Bastions with elite legions.',
+      starTimes: [85, 135],
+      setup: () => [
+        { x: 1120, y: 360, r: 52, owner: 'red', troops: 100, type: 'FORTRESS' },
+        { x: 1080, y: 170, r: 34, owner: 'red', troops: 45, type: 'ARMORY' },
+        { x: 1080, y: 550, r: 34, owner: 'red', troops: 45, type: 'TOWN' },
+        { x: 910, y: 230, r: 32, owner: 'red', troops: 40, type: 'FORTRESS' },
+        { x: 910, y: 490, r: 32, owner: 'red', troops: 40, type: 'TOWN' },
+        { x: 160, y: 360, r: 52, owner: 'blue', troops: 125, type: 'FORTRESS' },
+        { x: 200, y: 170, r: 34, owner: 'blue', troops: 65, type: 'ARMORY' },
+        { x: 200, y: 550, r: 34, owner: 'blue', troops: 65, type: 'ARMORY' },
+        { x: 360, y: 250, r: 28, owner: 'blue', troops: 45, type: 'TOWN' },
+        { x: 360, y: 470, r: 28, owner: 'blue', troops: 45, type: 'TOWN' },
+        { x: 640, y: 360, r: 46, owner: 'grey', troops: 45, type: 'FORTRESS' },
+        { x: 640, y: 180, r: 34, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 640, y: 540, r: 34, owner: 'grey', troops: 25, type: 'ARMORY' },
+        { x: 500, y: 360, r: 26, owner: 'grey', troops: 18, type: 'TOWN' },
+        { x: 780, y: 360, r: 26, owner: 'grey', troops: 18, type: 'TOWN' }
+      ]
+    }
+  ];
+
+  // =================================================================
+  // 2. TOAST NOTIFICATION HELPER & SAFE WEBP IMAGE PRELOADER
+  // =================================================================
+  let toastTimeout = null;
+  function showToast(msg, duration = 3200) {
+    const el = document.getElementById('toastBanner');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      el.style.display = 'none';
+    }, duration);
+  }
+
+  const mapImages = {};
+  ['map1', 'map2', 'map3'].forEach(key => {
+    const img = new Image();
+    img.loaded = false;
+    img.onload = () => { img.loaded = true; };
+    img.onerror = () => { img.loaded = false; };
+    img.src = `${key}.webp`;
+    mapImages[key] = img;
+  });
+
+  // =================================================================
+  // 3. SAFE AUDIO SYNTHESIZER (WITH iOS WEBKIT TOUCHEND RESUME)
+  // =================================================================
+  const AudioEngine = {
+    ctx: null,
+    enabled: true,
+    adMuted: false,
+    portalMuted: false,
+    windowFocused: true,
+    init() {
+      try {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        this.syncState();
+      } catch (_) {}
+    },
+    syncState() {
+      if (!this.ctx) return;
+      const shouldRun = this.enabled && !this.adMuted && !this.portalMuted && !document.hidden && this.windowFocused;
+      try {
+        if (shouldRun && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        } else if (!shouldRun && this.ctx.state === 'running') {
+          this.ctx.suspend().catch(() => {});
+        }
+      } catch (_) {}
+    },
+    canPlay() {
+      return this.enabled && !this.adMuted && !this.portalMuted && !document.hidden && this.windowFocused && this.ctx;
+    },
+    playTone(type, freqStart, freqEnd, duration, gainVal) {
+      if (!this.canPlay()) return;
+      try {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freqStart, this.ctx.currentTime);
+        if (freqEnd !== freqStart) {
+          osc.frequency.exponentialRampToValueAtTime(freqEnd, this.ctx.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      } catch (_) {}
+    },
+    playLaunch() {
+      this.playTone('triangle', 280, 540, 0.08, 0.06);
+    },
+    playCapture(isFriendly) {
+      const f = isFriendly ? 523.25 : 220;
+      this.playTone('sine', f, f * 1.5, 0.2, 0.1);
+    },
+    playVictory() {
+      [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+        setTimeout(() => this.playTone('triangle', freq, freq, 0.35, 0.12), i * 110);
+      });
+    },
+    playDefeat() {
+      [300, 260, 220, 174].forEach((freq, i) => {
+        setTimeout(() => this.playTone('sawtooth', freq, freq, 0.28, 0.08), i * 120);
+      });
+    }
+  };
+
+  document.addEventListener('visibilitychange', () => AudioEngine.syncState());
+  window.addEventListener('blur', () => {
+    AudioEngine.windowFocused = false;
+    AudioEngine.syncState();
+  });
+  window.addEventListener('focus', () => {
+    AudioEngine.windowFocused = true;
+    AudioEngine.syncState();
+  });
+  // CrazyGames iOS Technical Requirement: resume WebKit AudioContext on direct touchend/pointerup
+  const resumeWebKitAudio = () => {
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
+      AudioEngine.syncState();
+    }
+  };
+  document.addEventListener('touchend', resumeWebKitAudio, { passive: true });
+  document.addEventListener('pointerup', resumeWebKitAudio, { passive: true });
+
+  // =================================================================
+  // 4. ENGINE STATE & HYBRID STORAGE (LOCAL + CRAZYGAMES CLOUD)
+  // =================================================================
+  const WORLD_W = 1280, WORLD_H = 720;
+  const BASE_TROOP_SPEED = 65;
+  const COLOR_BLUE = '#2563eb';
+  const COLOR_RED = '#dc2626';
+  const COLOR_WHITE = '#fef3c7';
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  let territories = [];
+  let groups = [];
+  let particles = [];
+  let nextTerrId = 1, nextGroupId = 1;
+  let running = false, paused = false, lastTime = null, elapsed = 0;
+  let aiTickTimer = 0;
+  let battleSpeed = 1.0;
+  let hasDispatchedOnce = false;
+
+  let mode = 'menu';
+  let currentCampaignIdx = 0;
+  let campaignDifficulty = 'tactical';
+  let aiDifficulty = 'tactical';
+  let playerDispatchRatio = 0.50;
+  let skirmishNodesCount = 14;
+  let skirmishMap = 'map2';
+  let activeSetupData = null;
+  let activeActFilter = 'all';
+  let helpSource = 'menu';
+
+  let selectedTerritories = new Set();
+  let isPointerDown = false;
+  let activePointerId = null;
+  let dragSelectionPath = [];
+  let hoveredTerritory = null;
+
+  let levelProgress = {};
+  let adUnlockedLevels = {};
+
+  const StorageManager = {
+    getItem(key) {
+      try {
+        if (AdManager.initialized && AdManager.sdk && AdManager.sdk.data) {
+          const val = AdManager.sdk.data.getItem(key);
+          if (val !== null && val !== undefined) return val;
+        }
+      } catch (_) {}
+      try { return localStorage.getItem(key); } catch (_) { return null; }
+    },
+    setItem(key, val) {
+      try { localStorage.setItem(key, val); } catch (_) {}
+      try {
+        if (AdManager.initialized && AdManager.sdk && AdManager.sdk.data) {
+          AdManager.sdk.data.setItem(key, val);
+        }
+      } catch (_) {}
+    },
+    removeItem(key) {
+      try { localStorage.removeItem(key); } catch (_) {}
+      try {
+        if (AdManager.initialized && AdManager.sdk && AdManager.sdk.data) {
+          AdManager.sdk.data.removeItem(key);
+        }
+      } catch (_) {}
+    }
+  };
+
+  function loadSavedState() {
+    try {
+      const rawProg = StorageManager.getItem('bastion_marshal_progress');
+      if (rawProg) {
+        const parsed = JSON.parse(rawProg) || {};
+        for (const k in parsed) {
+          if (!levelProgress[k] || parsed[k] > levelProgress[k]) {
+            levelProgress[k] = parsed[k];
+          }
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const rawUnlocks = StorageManager.getItem('bastion_marshal_ad_unlocks');
+      if (rawUnlocks) {
+        const parsedU = JSON.parse(rawUnlocks) || {};
+        for (const k in parsedU) {
+          if (parsedU[k]) adUnlockedLevels[k] = true;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const muted = StorageManager.getItem('bastion_marshal_muted') === 'true';
+      AudioEngine.enabled = !muted;
+      const soundBtnEl = document.getElementById('soundBtn');
+      if (soundBtnEl) soundBtnEl.textContent = AudioEngine.enabled ? '🔊' : '🔇';
+    } catch (_) {}
+  }
+
+  function saveProgress(levelId, stars) {
+    if (!levelProgress[levelId] || levelProgress[levelId] < stars) {
+      levelProgress[levelId] = stars;
+      StorageManager.setItem('bastion_marshal_progress', JSON.stringify(levelProgress));
+    }
+  }
+
+  function saveAdUnlock(levelId) {
+    adUnlockedLevels[levelId] = true;
+    StorageManager.setItem('bastion_marshal_ad_unlocks', JSON.stringify(adUnlockedLevels));
+  }
+
+  // =================================================================
+  // 5. CRAZYGAMES SDK v3 MANAGER (BASIC & FULL LAUNCH COMPLIANT)
+  // =================================================================
+  const AD_DEBOUNCE_MS = 3000;
+
+  const AdManager = {
+    sdk: null,
+    initialized: false,
+    initPromise: null,
+    isGameplayActive: false,
+    adInProgress: false,
+    hasVanguardBuff: false,
+    rewardedAdsAvailable: true,
+    lastAdEndedAt: 0,
+
+    updateStatusBadge(text) {
+      const el = document.getElementById('envStatusBadge');
+      if (el) el.textContent = text;
+    },
+
+    setAdPending(pending) {
+      this.adInProgress = pending;
+      document.body.classList.toggle('ad-pending', pending);
+    },
+
+    disableRewardedUIForSession() {
+      this.rewardedAdsAvailable = false;
+      const rewardBox = document.getElementById('rewardContainer');
+      if (rewardBox) rewardBox.style.display = 'none';
+      if (document.getElementById('campaignMenu').style.display === 'flex') {
+        renderCampaignGrid();
+      }
+    },
+
+    init() {
+      if (this.initPromise) return this.initPromise;
+
+      this.initPromise = (async () => {
+        if (window.location.protocol === 'file:') {
+          this.initialized = false;
+          this.updateStatusBadge('🖥️ Local PC Mode (Offline Ready)');
+          return false;
+        }
+
+        if (!window.CrazyGames || !window.CrazyGames.SDK) {
+          this.initialized = false;
+          this.updateStatusBadge('🖥️ Standalone Web Mode (Offline Ready)');
+          return false;
+        }
+
+        try {
+          this.sdk = window.CrazyGames.SDK;
+          if (typeof this.sdk.init === 'function') {
+            await Promise.race([
+              this.sdk.init(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('SDK init timeout')), 5000))
+            ]);
+          }
+
+          const sdkEnv = (this.sdk && this.sdk.environment) ? this.sdk.environment : 'crazygames';
+          if (sdkEnv === 'disabled') {
+            this.initialized = false;
+            this.updateStatusBadge('🖥️ Standalone Web Mode (SDK Disabled on Host)');
+            return false;
+          }
+
+          this.initialized = true;
+          this.updateStatusBadge(`🟣 CrazyGames SDK Active (${sdkEnv})`);
+
+          // Report loading lifecycle for CrazyGames SDK v3 event validators
+          try {
+            if (this.sdk.game && typeof this.sdk.game.loadingStart === 'function') {
+              this.sdk.game.loadingStart();
+            }
+          } catch (_) {}
+
+          // Hide custom fullscreen button on CrazyGames to pass QA requirements
+          const fsBtnEl = document.getElementById('fullscreenBtn');
+          if (fsBtnEl) fsBtnEl.style.display = 'none';
+
+          // Check adblocker status on boot so we don't show dead rewarded buttons
+          try {
+            if (this.sdk.ad && typeof this.sdk.ad.hasAdblock === 'function') {
+              const adblockDetected = await this.sdk.ad.hasAdblock();
+              if (adblockDetected === true) {
+                this.disableRewardedUIForSession();
+              }
+            }
+          } catch (_) {}
+
+          // Sync initial portal mute setting and listen for runtime updates
+          try {
+            if (this.sdk.game) {
+              if (this.sdk.game.settings && typeof this.sdk.game.settings.muteAudio === 'boolean') {
+                AudioEngine.portalMuted = this.sdk.game.settings.muteAudio;
+                AudioEngine.syncState();
+              }
+              if (typeof this.sdk.game.addSettingsChangeListener === 'function') {
+                this.sdk.game.addSettingsChangeListener((settings) => {
+                  if (settings && typeof settings.muteAudio === 'boolean') {
+                    AudioEngine.portalMuted = settings.muteAudio;
+                    AudioEngine.syncState();
+                  }
+                });
+              }
+            }
+          } catch (_) {}
+
+          loadSavedState();
+          if (document.getElementById('campaignMenu').style.display === 'flex') {
+            renderCampaignGrid();
+          }
+
+          try {
+            if (this.sdk.game && typeof this.sdk.game.loadingStop === 'function') {
+              this.sdk.game.loadingStop();
+            }
+          } catch (_) {}
+
+          // If the user clicked Quick Battle before sdk.init() finished resolving,
+          // report gameplayStart() now so the first match is tracked by CrazyGames QA.
+          if (this.isGameplayActive && this.sdk.game && typeof this.sdk.game.gameplayStart === 'function') {
+            try { this.sdk.game.gameplayStart(); } catch (_) {}
+          }
+
+          return true;
+        } catch (err) {
+          console.warn('CrazyGames SDK init fallback:', err);
+          this.initialized = false;
+          this.updateStatusBadge('🖥️ Standalone Web Mode (Offline Ready)');
+          return false;
+        }
+      })();
+
+      return this.initPromise;
+    },
+
+    async ensureReady() {
+      if (this.initialized && this.sdk && this.sdk.ad) return true;
+      if (window.location.protocol === 'file:') return false;
+      return await this.init();
+    },
+
+    gameplayStart() {
+      if (this.isGameplayActive) return;
+      this.isGameplayActive = true;
+      if (this.initialized && this.sdk && this.sdk.game && typeof this.sdk.game.gameplayStart === 'function') {
+        try { this.sdk.game.gameplayStart(); } catch (_) {}
+      }
+    },
+
+    gameplayStop() {
+      if (!this.isGameplayActive) return;
+      this.isGameplayActive = false;
+      if (this.initialized && this.sdk && this.sdk.game && typeof this.sdk.game.gameplayStop === 'function') {
+        try { this.sdk.game.gameplayStop(); } catch (_) {}
+      }
+    },
+
+    happytime() {
+      if (this.initialized && this.sdk && this.sdk.game && typeof this.sdk.game.happytime === 'function') {
+        try { this.sdk.game.happytime(); } catch (_) {}
+      }
+    },
+
+    async runAd(type, onSuccess, onFailed) {
+      if (this.adInProgress) return;
+      const isRewarded = (type === 'rewarded');
+
+      // Short 3s debounce after a finished ad to prevent accidental back-to-back double triggers
+      if (!isRewarded && this.lastAdEndedAt > 0 && (Date.now() - this.lastAdEndedAt) < AD_DEBOUNCE_MS) {
+        if (onSuccess) onSuccess();
+        return;
+      }
+
+      // Lock UI and hotkeys synchronously before awaiting SDK readiness
+      this.setAdPending(true);
+
+      const ready = await this.ensureReady();
+      if (!ready || !this.sdk || !this.sdk.ad || typeof this.sdk.ad.requestAd !== 'function') {
+        this.setAdPending(false);
+        // Offline / Local PC fallback: midgame continues and rewarded grants reward on PC
+        if (onSuccess) onSuccess();
+        return;
+      }
+
+      let finished = false;
+      let auctionTimer = null;
+
+      const setAdMute = (muted) => {
+        AudioEngine.adMuted = muted;
+        AudioEngine.syncState();
+      };
+
+      const cleanup = (markAdShown = false) => {
+        if (finished) return false;
+        finished = true;
+        if (auctionTimer) {
+          clearTimeout(auctionTimer);
+          auctionTimer = null;
+        }
+        if (markAdShown) {
+          this.lastAdEndedAt = Date.now();
+        }
+        this.setAdPending(false);
+        setAdMute(false);
+        return true;
+      };
+
+      // Pre-ad auction watchdog: ONLY guards against a hung network request BEFORE adStarted fires.
+      // Cleared immediately in adStarted so 15s-30s video ads are never cut short.
+      auctionTimer = setTimeout(() => {
+        if (cleanup(false)) {
+          if (isRewarded) {
+            // Hide rewarded buttons so no dead button remains clickable
+            this.disableRewardedUIForSession();
+            if (onFailed) onFailed('timeout');
+          } else if (onSuccess) {
+            onSuccess();
+          }
+        }
+      }, 15000);
+
+      try {
+        this.sdk.ad.requestAd(type, {
+          adStarted: () => {
+            if (auctionTimer) {
+              clearTimeout(auctionTimer);
+              auctionTimer = null;
+            }
+            this.gameplayStop();
+            setAdMute(true);
+          },
+          adFinished: () => {
+            if (cleanup(true) && onSuccess) onSuccess();
+          },
+          adError: (err) => {
+            if (!cleanup(false)) return;
+            const code = (err && (err.code || err.reason)) ? (err.code || err.reason) : '';
+            if (code === 'adsDisabled' || code === 'adblock') {
+              this.disableRewardedUIForSession();
+            }
+            if (!isRewarded) {
+              if (onSuccess) onSuccess();
+            } else {
+              // CrazyGames QA requirement:
+              // 1. Never grant the reward on adError.
+              // 2. Never leave a rewarded ad button clickable without effect (hide it immediately).
+              this.disableRewardedUIForSession();
+              if (onFailed) onFailed(code);
+            }
+          }
+        });
+      } catch (err) {
+        if (cleanup(false)) {
+          if (!isRewarded) {
+            if (onSuccess) onSuccess();
+          } else {
+            this.disableRewardedUIForSession();
+            if (onFailed) onFailed('exception');
+          }
+        }
+      }
+    },
+
+    maybeShowMidgameAd(onComplete) {
+      return this.runAd('midgame', onComplete);
+    },
+
+    showRewardedAd(onRewarded, onFailed) {
+      return this.runAd('rewarded', onRewarded, onFailed);
+    }
+  };
+
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  function formatTimeMMSS(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    const mm = Math.floor(s / 60).toString().padStart(2, '0');
+    const ss = (s % 60).toString().padStart(2, '0');
+    return `${mm}:${ss}`;
+  }
+
+  function fitCanvas() {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+  }
+  window.addEventListener('resize', fitCanvas);
+
+  function clientToWorld(cx, cy) {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { x: 0, y: 0 };
+    return {
+      x: (cx - rect.left) * (WORLD_W / rect.width),
+      y: (cy - rect.top) * (WORLD_H / rect.height)
+    };
+  }
+
+  function screenX(wx) { return wx / WORLD_W * canvas.width; }
+  function screenY(wy) { return wy / WORLD_H * canvas.height; }
+  function screenR(wr) { return wr / WORLD_W * canvas.width; }
+
+  // =================================================================
+  // 6. CASTLE POLYGONS & CARTOGRAPHIC DRAWING (200-500 MAX CAP)
+  // =================================================================
+
+  function generateCastlePolygon(radius, sides = 7) {
+    const vertices = [];
+    const angleStep = (Math.PI * 2) / sides;
+    for (let i = 0; i < sides; i++) {
+      const angle = i * angleStep + ((Math.random() - 0.5) * 0.22);
+      const r = radius * (0.88 + (Math.random() * 0.24));
+      vertices.push({
+        dx: Math.cos(angle) * r,
+        dy: Math.sin(angle) * r
+      });
+    }
+    return vertices;
+  }
+
+  function createTerritory(x, y, radius, owner = 'grey', troops = 0, typeKey = 'TOWN') {
+    const archetype = NODE_TYPES[typeKey] || NODE_TYPES.TOWN;
+    const sides = (typeKey === 'FORTRESS') ? 8 : (typeKey === 'ARMORY' ? 6 : 7);
+    const polygon = generateCastlePolygon(radius, sides);
+
+    const t = {
+      id: nextTerrId++,
+      x, y, radius,
+      owner,
+      troops: Math.max(0, Math.floor(troops)),
+      maxCap: calculatePolygonMaxCap(radius),
+      acc: 0,
+      dmgAcc: 0,
+      type: typeKey,
+      archetype,
+      polygon,
+      pulseAnim: 0
+    };
+    territories.push(t);
+    return t;
+  }
+
+  function spawnParticles(x, y, color, count = 8) {
+    if (particles.length > 150) return;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 60 + 20;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.4 + Math.random() * 0.3,
+        maxLife: 0.7,
+        color,
+        size: Math.random() * 3 + 2
+      });
+    }
+  }
+
+  function drawProceduralCartography(mapKey) {
+    ctx.fillStyle = mapKey === 'map1' ? '#e5d5b5' : (mapKey === 'map2' ? '#ded0b6' : '#e8d6b3');
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const grad = ctx.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.2,
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.72
+    );
+    grad.addColorStop(0, 'rgba(255, 248, 225, 0.18)');
+    grad.addColorStop(1, 'rgba(60, 35, 15, 0.38)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = 'rgba(92, 62, 33, 0.08)';
+    ctx.lineWidth = Math.max(1, screenR(1));
+    for (let gx = 160; gx < WORLD_W; gx += 160) {
+      ctx.beginPath();
+      ctx.moveTo(screenX(gx), 0);
+      ctx.lineTo(screenX(gx), canvas.height);
+      ctx.stroke();
+    }
+    for (let gy = 120; gy < WORLD_H; gy += 120) {
+      ctx.beginPath();
+      ctx.moveTo(0, screenY(gy));
+      ctx.lineTo(canvas.width, screenY(gy));
+      ctx.stroke();
+    }
+
+    if (mapKey === 'map1') {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(screenX(640), 0);
+      ctx.bezierCurveTo(screenX(520), screenY(240), screenX(760), screenY(480), screenX(640), canvas.height);
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.22)';
+      ctx.lineWidth = screenR(44);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(30, 64, 175, 0.25)';
+      ctx.lineWidth = screenR(2);
+      ctx.stroke();
+      ctx.restore();
+    } else if (mapKey === 'map2') {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(87, 65, 47, 0.18)';
+      ctx.lineWidth = screenR(26);
+      ctx.beginPath();
+      ctx.moveTo(screenX(280), screenY(90));
+      ctx.lineTo(screenX(1000), screenY(90));
+      ctx.moveTo(screenX(280), screenY(630));
+      ctx.lineTo(screenX(1000), screenY(630));
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(180, 83, 9, 0.16)';
+      ctx.lineWidth = screenR(18);
+      ctx.beginPath();
+      ctx.arc(screenX(640), screenY(360), screenR(210), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(92, 62, 33, 0.16)';
+    ctx.lineWidth = screenR(2.2);
+    ctx.setLineDash([screenR(6), screenR(6)]);
+    for (let i = 0; i < territories.length; i++) {
+      for (let j = i + 1; j < territories.length; j++) {
+        if (dist(territories[i], territories[j]) < 340) {
+          ctx.beginPath();
+          ctx.moveTo(screenX(territories[i].x), screenY(territories[i].y));
+          ctx.lineTo(screenX(territories[j].x), screenY(territories[j].y));
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawBackground() {
+    let mapKey = 'map1';
+    if (mode === 'campaign') {
+      const lvl = CAMPAIGN_LEVELS[currentCampaignIdx];
+      mapKey = (lvl && lvl.map) ? lvl.map : 'map1';
+    } else if (mode === 'skirmish') {
+      mapKey = skirmishMap || 'map2';
+    } else {
+      mapKey = 'map3';
+    }
+
+    const img = mapImages[mapKey] || mapImages.map1;
+    let drawn = false;
+
+    if (img && img.loaded && img.complete && img.naturalWidth > 0) {
+      try {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(230, 213, 184, 0.15)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawn = true;
+      } catch (_) {}
+    }
+
+    if (!drawn) {
+      drawProceduralCartography(mapKey);
+    }
+
+    ctx.strokeStyle = '#5a3d28';
+    ctx.lineWidth = screenR(6);
+    ctx.strokeRect(screenR(6), screenR(6), canvas.width - screenR(12), canvas.height - screenR(12));
+  }
+
+  // =================================================================
+  // 7. COMBAT & TROOP RESOLUTION
+  // =================================================================
+
+  function sendArmada(sourceTerritories, destTerritory, ratio = 0.5) {
+    if (!destTerritory) return;
+    let anySent = false;
+    for (const src of sourceTerritories) {
+      if (src.id === destTerritory.id || src.troops <= 1) continue;
+
+      const amount = Math.floor(src.troops * ratio);
+      if (amount <= 0) continue;
+
+      src.troops -= amount;
+      const dx = destTerritory.x - src.x, dy = destTerritory.y - src.y;
+      const distance = Math.hypot(dx, dy) || 1;
+
+      groups.push({
+        id: nextGroupId++,
+        toId: destTerritory.id,
+        owner: src.owner,
+        troops: amount,
+        x: src.x, y: src.y,
+        vx: (dx / distance) * BASE_TROOP_SPEED,
+        vy: (dy / distance) * BASE_TROOP_SPEED,
+        remaining: distance / BASE_TROOP_SPEED
+      });
+
+      spawnParticles(src.x, src.y, src.owner === 'blue' ? COLOR_BLUE : COLOR_RED, 4);
+      anySent = true;
+    }
+    if (anySent) {
+      if (sourceTerritories.some(s => s.owner === 'blue')) hasDispatchedOnce = true;
+      AudioEngine.playLaunch();
+    }
+  }
+
+  function processArrival(group, dest) {
+    if (dest.owner === group.owner) {
+      dest.troops += group.troops;
+      dest.pulseAnim = 1.0;
+      return;
+    }
+
+    const damageTaken = dest.archetype.damageTaken || 1.0;
+    const effectiveDef = (dest.troops - dest.dmgAcc) / damageTaken;
+
+    if (group.troops > effectiveDef) {
+      const survivingInvaders = Math.max(1, Math.floor(group.troops - effectiveDef));
+      dest.owner = group.owner;
+      dest.troops = survivingInvaders;
+      dest.acc = 0;
+      dest.dmgAcc = 0;
+      dest.pulseAnim = 1.4;
+
+      spawnParticles(dest.x, dest.y, group.owner === 'blue' ? COLOR_BLUE : COLOR_RED, 16);
+      AudioEngine.playCapture(group.owner === 'blue');
+    } else {
+      dest.dmgAcc += group.troops * damageTaken;
+      const wholeKilled = Math.floor(dest.dmgAcc + 1e-6);
+      if (wholeKilled > 0) {
+        dest.troops = Math.max(0, dest.troops - wholeKilled);
+        dest.dmgAcc = Math.max(0, dest.dmgAcc - wholeKilled);
+      }
+      dest.pulseAnim = 0.6;
+      spawnParticles(dest.x, dest.y, COLOR_WHITE, 6);
+    }
+  }
+
+  // =================================================================
+  // 8. AI ENGINE (STALEMATE-PROOF TACTICAL AI + GRANDMASTER AI)
+  // =================================================================
+  const AI_STRICT_RATIO = 0.50;
+
+  function aiTickTactical() {
+    if (elapsed < 2.5) return;
+
+    const aiOwner = 'red';
+    const myNodes = territories.filter(t => t.owner === aiOwner);
+    const enemyNodes = territories.filter(t => t.owner !== aiOwner);
+    if (myNodes.length === 0 || enemyNodes.length === 0) return;
+
+    const threats = {};
+    territories.forEach(t => threats[t.id] = 0);
+    groups.forEach(g => {
+      if (g.owner !== aiOwner && threats[g.toId] !== undefined) threats[g.toId] += g.troops;
+    });
+
+    const endangered = myNodes.find(t => threats[t.id] > (t.troops / (t.archetype.damageTaken || 1.0)));
+    if (endangered) {
+      const helper = myNodes.find(t => t.id !== endangered.id && t.troops > 25 && threats[t.id] === 0);
+      if (helper) {
+        sendArmada([helper], endangered, AI_STRICT_RATIO);
+        return;
+      }
+    }
+
+    const candidates = myNodes
+      .filter(s => s.troops >= 26 && threats[s.id] === 0)
+      .sort((a, b) => b.troops - a.troops);
+
+    if (candidates.length === 0) return;
+
+    for (const src of candidates) {
+      let bestTarget = null;
+      let bestScore = -Infinity;
+
+      for (const target of enemyNodes) {
+        const d = dist(src, target);
+        const trueDef = target.troops / (target.archetype.damageTaken || 1.0);
+        const fuzzedDef = trueDef * (0.82 + Math.random() * 0.36);
+        const humanNoise = (Math.random() - 0.5) * 20;
+        const neutralBonus = (target.owner === 'grey') ? 22 : 0;
+        const armoryBonus = (target.type === 'ARMORY') ? 24 : 0;
+        const score = (target.radius * 2) + neutralBonus + armoryBonus - (fuzzedDef * 1.1) - (d * 0.14) + humanNoise;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestTarget = target;
+        }
+      }
+
+      if (bestTarget) {
+        const trueDef = bestTarget.troops / (bestTarget.archetype.damageTaken || 1.0);
+        const perceivedDef = trueDef * (0.82 + Math.random() * 0.36);
+        const attackForce = src.troops * AI_STRICT_RATIO;
+
+        if (attackForce > perceivedDef + 2 || src.troops >= src.maxCap * 0.65 || src.troops >= 130) {
+          sendArmada([src], bestTarget, AI_STRICT_RATIO);
+          return;
+        }
+      }
+    }
+
+    if (myNodes.length > 1) {
+      const frontline = myNodes
+        .slice()
+        .sort((a, b) => Math.min(...enemyNodes.map(e => dist(a, e))) - Math.min(...enemyNodes.map(e => dist(b, e))))[0];
+
+      const rearDonor = candidates.find(s => s.id !== frontline.id && s.troops >= 45 && frontline.troops < frontline.maxCap * 0.85);
+      if (rearDonor && frontline) {
+        sendArmada([rearDonor], frontline, AI_STRICT_RATIO);
+        return;
+      }
+    }
+
+    if (candidates.length >= 2) {
+      const pair = [candidates[0], candidates[1]];
+      const combinedForce = pair.reduce((sum, n) => sum + Math.floor(n.troops * AI_STRICT_RATIO), 0);
+
+      const weakestEnemy = enemyNodes
+        .slice()
+        .sort((a, b) => (a.troops / (a.archetype.damageTaken || 1.0)) - (b.troops / (b.archetype.damageTaken || 1.0)))[0];
+
+      if (weakestEnemy) {
+        const weakDef = weakestEnemy.troops / (weakestEnemy.archetype.damageTaken || 1.0);
+        if (combinedForce > weakDef * 0.85 || candidates[0].troops >= 90) {
+          sendArmada(pair, weakestEnemy, AI_STRICT_RATIO);
+          return;
+        }
+      }
+    }
+
+    if (candidates[0].troops >= 80) {
+      const weakestEnemy = enemyNodes
+        .slice()
+        .sort((a, b) => (a.troops / (a.archetype.damageTaken || 1.0)) - (b.troops / (b.archetype.damageTaken || 1.0)))[0];
+      if (weakestEnemy) {
+        sendArmada([candidates[0]], weakestEnemy, AI_STRICT_RATIO);
+      }
+    }
+  }
+
+  function aiTickGrandmaster() {
+    const aiOwner = 'red';
+    const myNodes = territories.filter(t => t.owner === aiOwner);
+    const enemyNodes = territories.filter(t => t.owner !== aiOwner);
+    if (myNodes.length === 0 || enemyNodes.length === 0) return;
+
+    const incomingThreats = {};
+    const incomingAllies = {};
+    territories.forEach(t => { incomingThreats[t.id] = 0; incomingAllies[t.id] = 0; });
+    groups.forEach(g => {
+      if (g.owner !== aiOwner && incomingThreats[g.toId] !== undefined) incomingThreats[g.toId] += g.troops;
+      else if (g.owner === aiOwner && incomingAllies[g.toId] !== undefined) incomingAllies[g.toId] += g.troops;
+    });
+
+    const crises = myNodes.filter(t => incomingThreats[t.id] > ((t.troops / (t.archetype.damageTaken || 1.0)) + incomingAllies[t.id]));
+    if (crises.length > 0) {
+      crises.sort((a, b) => incomingThreats[b.id] - incomingThreats[a.id]);
+      const targetCrisis = crises[0];
+      const needed = Math.ceil((incomingThreats[targetCrisis.id] - (targetCrisis.troops / (targetCrisis.archetype.damageTaken || 1.0))) + 4);
+
+      const helpers = myNodes.filter(t => t.id !== targetCrisis.id && incomingThreats[t.id] === 0);
+      let gathered = 0;
+      const senders = [];
+      for (const h of helpers) {
+        if (gathered >= needed) break;
+        senders.push(h);
+        gathered += Math.floor(h.troops * AI_STRICT_RATIO);
+      }
+      if (senders.length > 0) {
+        sendArmada(senders, targetCrisis, AI_STRICT_RATIO);
+        return;
+      }
+    }
+
+    for (const src of myNodes) {
+      if (src.troops > 40 && incomingThreats[src.id] === 0) {
+        const closestEnemyDist = Math.min(...enemyNodes.map(e => dist(src, e)));
+        if (closestEnemyDist > 450) {
+          const frontlineBase = myNodes
+            .filter(n => n.id !== src.id)
+            .sort((a, b) => Math.min(...enemyNodes.map(e => dist(a, e))) - Math.min(...enemyNodes.map(e => dist(b, e))))[0];
+          if (frontlineBase) {
+            sendArmada([src], frontlineBase, AI_STRICT_RATIO);
+            return;
+          }
+        }
+      }
+    }
+
+    let bestTarget = null, bestScore = -Infinity;
+    enemyNodes.forEach(target => {
+      let minDist = Infinity;
+      myNodes.forEach(s => minDist = Math.min(minDist, dist(s, target)));
+
+      let strategicValue = target.radius * 2;
+      if (target.type === 'ARMORY') strategicValue += 35;
+      if (target.owner === 'blue') strategicValue += 15;
+
+      const effectiveDef = target.troops / (target.archetype.damageTaken || 1.0);
+      const score = strategicValue - (effectiveDef * 0.8) - (minDist * 0.12);
+      if (score > bestScore) { bestScore = score; bestTarget = target; }
+    });
+
+    if (bestTarget) {
+      const targetDef = (bestTarget.troops / (bestTarget.archetype.damageTaken || 1.0)) + (bestTarget.owner !== 'grey' ? 6 : 0);
+      const readyAttackers = myNodes.filter(s => incomingThreats[s.id] === 0 && s.troops > 15);
+      const totalPotentialForce = readyAttackers.reduce((sum, s) => sum + Math.floor(s.troops * AI_STRICT_RATIO), 0);
+
+      if (totalPotentialForce > targetDef + 4 || readyAttackers.some(s => s.troops >= s.maxCap * 0.75)) {
+        sendArmada(readyAttackers, bestTarget, AI_STRICT_RATIO);
+      }
+    }
+  }
+
+  // =================================================================
+  // 9. SIMULATION & DRAW LOOP
+  // =================================================================
+
+  function update(rawDt) {
+    if (!running || paused) return;
+    const dt = rawDt * battleSpeed;
+    elapsed += dt;
+
+    for (const t of territories) {
+      if (t.owner === 'blue' || t.owner === 'red') {
+        if (t.troops < t.maxCap) {
+          const ownerMod = (t.owner === 'red' && aiDifficulty === 'tactical') ? 0.85 : 1.0;
+          const rate = (t.radius / 10) * (t.archetype.regen || 1.0) * ownerMod;
+          t.acc += rate * dt;
+          if (t.acc >= 1) {
+            const add = Math.floor(t.acc);
+            t.troops = Math.min(t.maxCap, t.troops + add);
+            t.acc -= add;
+          }
+        } else {
+          t.acc = 0;
+        }
+      }
+      if (t.pulseAnim > 0) t.pulseAnim = Math.max(0, t.pulseAnim - dt * 2.5);
+    }
+
+    for (let i = groups.length - 1; i >= 0; i--) {
+      const g = groups[i];
+      g.remaining -= dt;
+      g.x += g.vx * dt;
+      g.y += g.vy * dt;
+      if (g.remaining <= 0) {
+        const dest = territories.find(t => t.id === g.toId);
+        if (dest) processArrival(g, dest);
+        groups.splice(i, 1);
+      }
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    const tickInterval = (aiDifficulty === 'grandmaster') ? 0.55 : 1.35;
+    aiTickTimer += dt;
+    if (aiTickTimer >= tickInterval) {
+      aiTickTimer = 0;
+      if (aiDifficulty === 'grandmaster') aiTickGrandmaster();
+      else aiTickTactical();
+    }
+
+    const blueCount = territories.filter(t => t.owner === 'blue').length;
+    const redCount = territories.filter(t => t.owner === 'red').length;
+    const blueGroups = groups.filter(g => g.owner === 'blue').length;
+    const redGroups = groups.filter(g => g.owner === 'red').length;
+
+    if ((blueCount === 0 && blueGroups === 0) || (redCount === 0 && redGroups === 0)) {
+      running = false;
+      endMatch((blueCount > 0 || blueGroups > 0) ? 'Blue' : 'Red');
+    }
+  }
+
+  function drawTutorialOverlay() {
+    if (!running || paused || hasDispatchedOnce || elapsed > 12) return;
+    if (mode === 'campaign' && currentCampaignIdx !== 0) return;
+
+    const src = territories.find(t => t.owner === 'blue');
+    const dst = territories.filter(t => t.owner === 'grey').sort((a, b) => dist(src || a, a) - dist(src || b, b))[0];
+    if (!src || !dst) return;
+
+    const progress = (elapsed * 0.85) % 1;
+    const curX = src.x + (dst.x - src.x) * progress;
+    const curY = src.y + (dst.y - src.y) * progress;
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.75)';
+    ctx.lineWidth = screenR(4);
+    ctx.setLineDash([screenR(8), screenR(6)]);
+    ctx.beginPath();
+    ctx.moveTo(screenX(src.x), screenY(src.y));
+    ctx.lineTo(screenX(dst.x), screenY(dst.y));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.font = `700 ${Math.round(screenR(26))}px "Georgia", serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👆', screenX(curX), screenY(curY));
+
+    ctx.fillStyle = 'rgba(20, 12, 6, 0.85)';
+    const bannerW = screenR(270), bannerH = screenR(34);
+    ctx.fillRect(screenX(640) - bannerW / 2, screenY(92) - bannerH / 2, bannerW, bannerH);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = screenR(1.5);
+    ctx.strokeRect(screenX(640) - bannerW / 2, screenY(92) - bannerH / 2, bannerW, bannerH);
+
+    ctx.fillStyle = '#fde68a';
+    ctx.font = `700 ${Math.round(screenR(14))}px "Georgia", serif`;
+    ctx.fillText('Drag from Blue to Conquer!', screenX(640), screenY(92));
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.globalAlpha = 1.0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBackground();
+
+    for (const g of groups) {
+      const dest = territories.find(t => t.id === g.toId);
+      if (!dest) continue;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(screenX(g.x), screenY(g.y));
+      ctx.lineTo(screenX(dest.x), screenY(dest.y));
+      ctx.strokeStyle = g.owner === 'blue' ? 'rgba(37, 99, 235, 0.25)' : 'rgba(220, 38, 38, 0.28)';
+      ctx.lineWidth = screenR(1.8);
+      ctx.setLineDash([screenR(5), screenR(5)]);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (isPointerDown && dragSelectionPath.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(screenX(dragSelectionPath[0].x), screenY(dragSelectionPath[0].y));
+      for (let i = 1; i < dragSelectionPath.length; i++) {
+        ctx.lineTo(screenX(dragSelectionPath[i].x), screenY(dragSelectionPath[i].y));
+      }
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = screenR(3.5);
+      ctx.setLineDash([screenR(8), screenR(6)]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    for (const t of territories) {
+      const pulseScale = 1 + (t.pulseAnim * 0.08);
+      const x = screenX(t.x), y = screenY(t.y), r = screenR(t.radius) * pulseScale;
+
+      let fillColor = '#fef3c7';
+      let strokeColor = '#451a03';
+
+      if (t.owner === 'blue') {
+        fillColor = '#93c5fd';
+        strokeColor = '#1e3a8a';
+      } else if (t.owner === 'red') {
+        fillColor = '#fca5a5';
+        strokeColor = '#7f1d1d';
+      }
+
+      ctx.beginPath();
+      const p0 = t.polygon[0];
+      ctx.moveTo(x + screenR(p0.dx) * pulseScale, y + screenR(p0.dy) * pulseScale);
+      for (let i = 1; i < t.polygon.length; i++) {
+        const p = t.polygon[i];
+        ctx.lineTo(x + screenR(p.dx) * pulseScale, y + screenR(p.dy) * pulseScale);
+      }
+      ctx.closePath();
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(40, 20, 5, 0.4)';
+      ctx.shadowBlur = screenR(8);
+      ctx.shadowOffsetY = screenR(4);
+      ctx.fillStyle = fillColor;
+      ctx.fill();
+      ctx.restore();
+
+      ctx.lineWidth = Math.max(2.5, r * 0.09);
+      ctx.strokeStyle = strokeColor;
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (let i = 0; i < t.polygon.length; i++) {
+        const p = t.polygon[i];
+        const ix = x + screenR(p.dx * 0.52) * pulseScale;
+        const iy = y + screenR(p.dy * 0.52) * pulseScale;
+        if (i === 0) ctx.moveTo(ix, iy);
+        else ctx.lineTo(ix, iy);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(60, 30, 10, 0.35)';
+      ctx.lineWidth = screenR(1.5);
+      ctx.stroke();
+
+      if (selectedTerritories.has(t)) {
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = screenR(3);
+        ctx.setLineDash([screenR(5), screenR(4)]);
+        ctx.beginPath();
+        ctx.arc(x, y, r + screenR(7), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (hoveredTerritory === t && selectedTerritories.size > 0 && (!selectedTerritories.has(t) || selectedTerritories.size > 1)) {
+        let totalSending = 0;
+        selectedTerritories.forEach(src => {
+          if (src.id !== t.id && src.troops > 1) {
+            totalSending += Math.floor(src.troops * playerDispatchRatio);
+          }
+        });
+        if (totalSending > 0) {
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = screenR(3.5);
+          ctx.beginPath();
+          ctx.arc(x, y, r + screenR(10), 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = '#78350f';
+          ctx.font = `700 ${Math.max(10, Math.round(screenR(12)))}px "Georgia", serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText(`⚔️ ${totalSending}`, x, y + r + screenR(18));
+        }
+      }
+
+      ctx.fillStyle = '#1e1005';
+      ctx.font = `700 ${Math.round(r * 0.52)}px "Georgia", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(Math.max(0, Math.floor(t.troops))), x, y + 2);
+
+      if ((t.owner === 'blue' || t.owner === 'red') && t.troops >= t.maxCap) {
+        ctx.font = `700 ${Math.max(8, Math.round(r * 0.22))}px "Georgia", serif`;
+        ctx.fillStyle = '#92400e';
+        ctx.fillText(`MAX (${t.maxCap})`, x, y + r * 0.58);
+      }
+
+      ctx.font = `700 ${Math.max(9, Math.round(r * 0.22))}px "Georgia", serif`;
+      ctx.fillStyle = t.archetype.bannerColor;
+      ctx.fillText(`${t.archetype.icon} ${t.archetype.name}`, x, y - r - screenR(7));
+    }
+
+    for (const g of groups) {
+      const color = (g.owner === 'blue') ? COLOR_BLUE : COLOR_RED;
+      const gx = screenX(g.x), gy = screenY(g.y);
+      const gr = Math.max(10, canvas.width * 0.013);
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = screenR(2.5);
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.lineTo(screenX(g.x - g.vx * 0.08), screenY(g.y - g.vy * 0.08));
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      ctx.beginPath();
+      ctx.arc(gx, gy, gr, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#fef3c7';
+      ctx.lineWidth = screenR(2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `700 ${Math.round(gr * 0.85)}px "Georgia", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(Math.max(1, Math.floor(g.troops))), gx, gy + 1);
+    }
+
+    for (const p of particles) {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.life / p.maxLife;
+      ctx.beginPath();
+      ctx.arc(screenX(p.x), screenY(p.y), screenR(p.size), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+
+    drawTutorialOverlay();
+  }
+
+  function gameLoop(time) {
+    if (!lastTime) lastTime = time;
+    const dt = Math.min(0.08, (time - lastTime) / 1000);
+    lastTime = time;
+
+    update(dt);
+    draw();
+
+    if (running && !paused) {
+      document.getElementById('timer').textContent = formatTimeMMSS(elapsed);
+
+      const blueCount = territories.filter(t => t.owner === 'blue').length;
+      const redCount = territories.filter(t => t.owner === 'red').length;
+      const whiteCount = territories.filter(t => t.owner === 'grey').length;
+      document.getElementById('blueCount').textContent = blueCount;
+      document.getElementById('redCount').textContent = redCount;
+      document.getElementById('whiteCount').textContent = whiteCount;
+    }
+    requestAnimationFrame(gameLoop);
+  }
+
+  // =================================================================
+  // 10. INPUT (SINGLE-POINTER LOCKED) & KEYBOARD SCROLL LOCKS
+  // =================================================================
+
+  function findTerritoryAt(wx, wy) {
+    for (let i = territories.length - 1; i >= 0; i--) {
+      const t = territories[i];
+      if (dist(t, { x: wx, y: wy }) <= t.radius + 12) return t;
+    }
+    return null;
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!running || paused || AdManager.adInProgress) return;
+    if (isPointerDown && activePointerId !== null && e.pointerId !== activePointerId) return;
+
+    AudioEngine.init();
+    activePointerId = e.pointerId;
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    isPointerDown = true;
+    const w = clientToWorld(e.clientX, e.clientY);
+    dragSelectionPath = [w];
+
+    const hit = findTerritoryAt(w.x, w.y);
+    hoveredTerritory = hit;
+    if (hit) {
+      if (hit.owner === 'blue') {
+        if (!selectedTerritories.has(hit)) selectedTerritories.add(hit);
+      } else if (selectedTerritories.size > 0) {
+        sendArmada(Array.from(selectedTerritories), hit, playerDispatchRatio);
+        selectedTerritories.clear();
+      }
+    } else {
+      selectedTerritories.clear();
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!running || paused || AdManager.adInProgress) return;
+    if (isPointerDown && activePointerId !== null && e.pointerId !== activePointerId) return;
+
+    const w = clientToWorld(e.clientX, e.clientY);
+    const hit = findTerritoryAt(w.x, w.y);
+    hoveredTerritory = hit;
+
+    if (!isPointerDown) return;
+    dragSelectionPath.push(w);
+
+    if (hit && hit.owner === 'blue') {
+      selectedTerritories.add(hit);
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (!isPointerDown || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    isPointerDown = false;
+    activePointerId = null;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    const w = clientToWorld(e.clientX, e.clientY);
+    const target = findTerritoryAt(w.x, w.y);
+
+    if (target && selectedTerritories.size > 0) {
+      if (!selectedTerritories.has(target) || selectedTerritories.size > 1) {
+        sendArmada(Array.from(selectedTerritories), target, playerDispatchRatio);
+        selectedTerritories.clear();
+      }
+    }
+    dragSelectionPath = [];
+    hoveredTerritory = null;
+  });
+
+  canvas.addEventListener('pointercancel', (e) => {
+    if (activePointerId !== null && e.pointerId !== activePointerId) return;
+    isPointerDown = false;
+    activePointerId = null;
+    dragSelectionPath = [];
+    hoveredTerritory = null;
+  });
+
+  window.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+      e.preventDefault();
+    }
+    // Global lock so no hotkeys trigger state changes while an ad is active
+    if (AdManager.adInProgress) return;
+
+    if (e.key === '1') setPlayerRatio(0.25);
+    if (e.key === '2') setPlayerRatio(0.50);
+    if (e.key === '3') setPlayerRatio(0.75);
+    if (e.key.toLowerCase() === 'r') {
+      if (running && !paused) {
+        resetCurrentMatch();
+      } else if (!running && document.getElementById('endModal').style.display === 'flex') {
+        AdManager.maybeShowMidgameAd(() => {
+          document.getElementById('endModal').style.display = 'none';
+          resetCurrentMatch();
+        });
+      }
+    }
+    if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+      if (document.getElementById('helpModal').style.display === 'flex') {
+        document.getElementById('helpCloseBtn').click();
+      } else if (running) {
+        togglePause();
+      }
+    }
+    if (e.code === 'Space' && running && !paused) {
+      territories.filter(t => t.owner === 'blue').forEach(t => selectedTerritories.add(t));
+    }
+  });
+
+  function setPlayerRatio(ratio) {
+    playerDispatchRatio = ratio;
+    document.querySelectorAll('.ratio-btn').forEach(btn => {
+      btn.classList.toggle('active', parseFloat(btn.dataset.ratio) === ratio);
+    });
+  }
+
+  const ratioContainer = document.getElementById('ratioBtnContainer');
+  DISPATCH_OPTIONS.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = `ratio-btn ${opt.value === playerDispatchRatio ? 'active' : ''}`;
+    b.dataset.ratio = opt.value;
+    b.textContent = opt.label;
+    b.onclick = () => setPlayerRatio(opt.value);
+    ratioContainer.appendChild(b);
+  });
+
+  // =================================================================
+  // 11. GUARANTEED SKIRMISH SHUFFLER
+  // =================================================================
+
+  function generateSkirmishDeckMap(nodeCount) {
+    const layout = [];
+    const padX = 110;
+    const padY = 115;
+
+    layout.push({ x: 190, y: WORLD_H / 2, r: 38, owner: 'blue', troops: 90, type: 'TOWN' });
+    layout.push({ x: WORLD_W - 190, y: WORLD_H / 2, r: 38, owner: 'red', troops: 70, type: 'TOWN' });
+
+    const neutralCount = nodeCount - 2;
+    const deck = [];
+
+    if (nodeCount === 8) {
+      deck.push('FORTRESS', 'ARMORY', 'TOWN', 'TOWN', 'TOWN', 'TOWN');
+    } else if (nodeCount === 14) {
+      deck.push('FORTRESS', 'FORTRESS', 'ARMORY', 'ARMORY', 'ARMORY', 'TOWN', 'TOWN', 'TOWN', 'TOWN', 'TOWN', 'TOWN', 'TOWN');
+    } else {
+      deck.push('FORTRESS', 'FORTRESS', 'FORTRESS', 'FORTRESS');
+      deck.push('ARMORY', 'ARMORY', 'ARMORY', 'ARMORY');
+      for (let i = 0; i < 10; i++) deck.push('TOWN');
+    }
+
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+
+    let placed = 0;
+    let attempts = 0;
+    let minDistMargin = 32;
+
+    while (placed < neutralCount && attempts < 4000) {
+      attempts++;
+      if (attempts > 2500) minDistMargin = 18;
+
+      const radius = Math.floor(Math.random() * 12 + 24);
+      const x = Math.floor(Math.random() * (WORLD_W - padX * 2) + padX);
+      const y = Math.floor(Math.random() * (WORLD_H - padY * 2) + padY);
+
+      let ok = true;
+      for (const t of layout) {
+        if (dist(t, { x, y }) < t.r + radius + minDistMargin) { ok = false; break; }
+      }
+      if (!ok) continue;
+
+      const type = deck[placed] || 'TOWN';
+      const startTroops = (type === 'FORTRESS') ? Math.floor(Math.random() * 25 + 35) : Math.floor(Math.random() * 20 + 15);
+      layout.push({ x, y, r: radius, owner: 'grey', troops: startTroops, type });
+      placed++;
+    }
+
+    return layout;
+  }
+
+  // =================================================================
+  // 12. MATCH PIPELINE & RESETS
+  // =================================================================
+
+  function setHudVisible(visible) {
+    const btnDisp = visible ? 'inline-flex' : 'none';
+    ['menuBtn', 'resetBtn', 'speedBtn', 'pauseBtn'].forEach(id => {
+      document.getElementById(id).style.display = btnDisp;
+    });
+    document.getElementById('ratioBar').style.display = visible ? 'flex' : 'none';
+  }
+
+  function clearBoardToMenu() {
+    AdManager.gameplayStop();
+    running = false;
+    paused = false;
+    territories = [];
+    groups = [];
+    particles = [];
+    selectedTerritories.clear();
+    dragSelectionPath = [];
+    hoveredTerritory = null;
+    isPointerDown = false;
+    activePointerId = null;
+    setHudVisible(false);
+  }
+
+  function syncSkirmishUIButtons() {
+    document.querySelectorAll('.skirmish-map-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.map === skirmishMap);
+    });
+    document.querySelectorAll('.ai-diff-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.diff === aiDifficulty);
+    });
+    document.querySelectorAll('.map-size-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.nodes, 10) === skirmishNodesCount);
+    });
+  }
+
+  function startMatch(matchMode, setupData = null) {
+    mode = matchMode;
+    activeSetupData = setupData;
+
+    territories = [];
+    groups = [];
+    particles = [];
+    selectedTerritories.clear();
+    dragSelectionPath = [];
+    hoveredTerritory = null;
+    isPointerDown = false;
+    activePointerId = null;
+    nextTerrId = 1;
+    nextGroupId = 1;
+    running = true;
+    paused = false;
+    elapsed = 0;
+    aiTickTimer = 0;
+    lastTime = null;
+    hasDispatchedOnce = false;
+
+    document.getElementById('timer').textContent = '00:00';
+    document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    setHudVisible(true);
+    document.getElementById('pauseBtn').textContent = 'Pause';
+
+    AdManager.gameplayStart();
+
+    let layoutToBuild = [];
+    if (typeof setupData === 'function') {
+      layoutToBuild = setupData();
+    } else if (Array.isArray(setupData)) {
+      layoutToBuild = setupData;
+    } else if (mode === 'skirmish') {
+      layoutToBuild = generateSkirmishDeckMap(skirmishNodesCount);
+      activeSetupData = layoutToBuild;
+    }
+
+    layoutToBuild = layoutToBuild.map(n => ({ ...n }));
+
+    if (mode === 'campaign' && aiDifficulty === 'tactical') {
+      layoutToBuild.forEach(n => {
+        if (n.owner === 'blue') {
+          n.troops = Math.round(n.troops * 1.15);
+        }
+      });
+    }
+
+    const rallied = AdManager.hasVanguardBuff;
+    if (rallied) {
+      layoutToBuild.forEach(n => {
+        if (n.owner === 'blue') {
+          n.troops = Math.round(n.troops * 1.25);
+        }
+      });
+      AdManager.hasVanguardBuff = false;
+    }
+
+    layoutToBuild.forEach(n => {
+      const created = createTerritory(n.x, n.y, n.r, n.owner, n.troops, n.type);
+      if (rallied && created.owner === 'blue') {
+        created.pulseAnim = 1.6;
+        spawnParticles(created.x, created.y, '#f59e0b', 18);
+      }
+    });
+
+    if (rallied) {
+      showToast('⚡ Vanguard Rallied! +25% Starting Troops Applied!');
+    }
+
+    if (mode === 'campaign') {
+      const lvl = CAMPAIGN_LEVELS[currentCampaignIdx];
+      const titleShort = lvl ? lvl.title : `Op ${currentCampaignIdx + 1}`;
+      document.getElementById('modeBadge').textContent = `${titleShort} (${aiDifficulty.toUpperCase()})`;
+    } else {
+      const mapNames = { map1: 'Riverlands', map2: 'Mountain Pass', map3: 'Imperial Realm' };
+      document.getElementById('modeBadge').textContent = `Battle: ${mapNames[skirmishMap] || 'Custom'} (${aiDifficulty.toUpperCase()})`;
+    }
+  }
+
+  function resetCurrentMatch() {
+    if (mode === 'campaign') {
+      const lvl = CAMPAIGN_LEVELS[currentCampaignIdx];
+      aiDifficulty = campaignDifficulty;
+      startMatch('campaign', lvl.setup);
+    } else {
+      startMatch(mode, activeSetupData);
+    }
+  }
+
+  function endMatch(winner) {
+    const isPlayerWin = (winner === 'Blue');
+    if (isPlayerWin) AudioEngine.playVictory();
+    else AudioEngine.playDefeat();
+
+    AdManager.gameplayStop();
+
+    const finalTimeStr = formatTimeMMSS(elapsed);
+    document.getElementById('timer').textContent = finalTimeStr;
+
+    const endModal = document.getElementById('endModal');
+    const endTitle = document.getElementById('endTitle');
+    const endSubtitle = document.getElementById('endSubtitle');
+    const starAward = document.getElementById('starAward');
+    const nextBtn = document.getElementById('endNextBtn');
+    const endMenuBtn = document.getElementById('endMenuBtn');
+    const endSetupBtn = document.getElementById('endSetupBtn');
+    const endRetryBtn = document.getElementById('endRetryBtn');
+    const endNewRandomBtn = document.getElementById('endNewRandomBtn');
+    const rewardBox = document.getElementById('rewardContainer');
+    const rewardBtn = document.getElementById('endRewardVanguardBtn');
+
+    // Only display Rewarded Ad button if rewarded ads are available in this session
+    if (rewardBox && rewardBtn) {
+      if (AdManager.rewardedAdsAvailable) {
+        rewardBox.style.display = 'block';
+        if (isPlayerWin) {
+          if (mode === 'campaign' && currentCampaignIdx < CAMPAIGN_LEVELS.length - 1) {
+            rewardBtn.textContent = '🎬 Rally Vanguard for Next Province (+25% Troops)';
+          } else {
+            rewardBtn.textContent = '🎬 Rally Vanguard for Next Battle (+25% Troops)';
+          }
+        } else {
+          rewardBtn.textContent = '🎬 Rally Vanguard & Retry (+25% Starting Troops)';
+        }
+      } else {
+        rewardBox.style.display = 'none';
+      }
+    }
+
+    endTitle.textContent = isPlayerWin ? 'VICTORY' : 'DEFEAT';
+    endTitle.style.color = isPlayerWin ? 'var(--player-blue-light)' : 'var(--ai-red-light)';
+    if (isPlayerWin) {
+      if (mode === 'campaign' && currentCampaignIdx === CAMPAIGN_LEVELS.length - 1) {
+        endSubtitle.textContent = '🎉 All 20 Provinces Conquered! You have united the Realm under your banner!';
+        AdManager.happytime();
+      } else {
+        endSubtitle.textContent = 'The province has sworn fealty to your banner.';
+      }
+    } else {
+      endSubtitle.textContent = 'Your host has been routed.';
+    }
+    document.getElementById('endStats').textContent = `Duration: ${finalTimeStr}`;
+
+    if (mode === 'campaign') {
+      endMenuBtn.textContent = '◀ Campaign Map';
+      endSetupBtn.style.display = 'none';
+      endNewRandomBtn.style.display = 'none';
+      endRetryBtn.textContent = '⟲ Retry Province';
+
+      if (isPlayerWin) {
+        const lvl = CAMPAIGN_LEVELS[currentCampaignIdx];
+        let stars = 1;
+        if (elapsed <= lvl.starTimes[0]) stars = 3;
+        else if (elapsed <= lvl.starTimes[1]) stars = 2;
+
+        if (stars === 3) AdManager.happytime();
+        saveProgress(lvl.id, stars);
+        starAward.textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+        starAward.style.display = 'block';
+        nextBtn.style.display = (currentCampaignIdx < CAMPAIGN_LEVELS.length - 1) ? 'inline-flex' : 'none';
+      } else {
+        starAward.style.display = 'none';
+        nextBtn.style.display = 'none';
+      }
+    } else {
+      endMenuBtn.textContent = '◀ Main Menu';
+      endSetupBtn.style.display = 'inline-flex';
+      endSetupBtn.textContent = '⚙️ Battle Setup';
+      endRetryBtn.textContent = '⟲ Replay Same Map';
+      endNewRandomBtn.style.display = 'inline-flex';
+      starAward.style.display = 'none';
+      nextBtn.style.display = 'none';
+    }
+
+    endModal.style.display = 'flex';
+  }
+
+  // =================================================================
+  // 13. MENUS & UI LISTENERS
+  // =================================================================
+
+  const modeListContainer = document.getElementById('mainModeList');
+
+  const quickPlayBtn = document.createElement('button');
+  quickPlayBtn.className = 'btn btn-accent';
+  quickPlayBtn.style.padding = '12px';
+  quickPlayBtn.innerHTML = `<b>🎲 Quick Battle (Mountain Pass • 14)</b>`;
+  quickPlayBtn.onclick = () => {
+    AudioEngine.init();
+    skirmishMap = 'map2';
+    aiDifficulty = 'tactical';
+    skirmishNodesCount = 14;
+    syncSkirmishUIButtons();
+    startMatch('skirmish', null);
+  };
+  modeListContainer.appendChild(quickPlayBtn);
+
+  const campBtn = document.createElement('button');
+  campBtn.className = 'btn';
+  campBtn.style.padding = '12px';
+  campBtn.innerHTML = `<b>⚔️ Campaign Chronicles (20 Levels)</b>`;
+  campBtn.onclick = () => { AudioEngine.init(); openCampaignMenu(); };
+  modeListContainer.appendChild(campBtn);
+
+  const skirBtn = document.createElement('button');
+  skirBtn.className = 'btn';
+  skirBtn.style.padding = '12px';
+  skirBtn.innerHTML = `<b>🏰 Custom Battle (Skirmish)</b>`;
+  skirBtn.onclick = () => { AudioEngine.init(); openSkirmishMenu(); };
+  modeListContainer.appendChild(skirBtn);
+
+  const helpBtn = document.createElement('button');
+  helpBtn.className = 'btn';
+  helpBtn.style.padding = '12px';
+  helpBtn.innerHTML = `<b>📜 How to Play & Field Guide</b>`;
+  helpBtn.onclick = () => { AudioEngine.init(); helpSource = 'menu'; openHelpMenu(); };
+  modeListContainer.appendChild(helpBtn);
+
+  function openHelpMenu() {
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('helpModal').style.display = 'flex';
+  }
+
+  function openCampaignMenu() {
+    clearBoardToMenu();
+    document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    document.getElementById('campaignMenu').style.display = 'flex';
+    renderCampaignGrid();
+  }
+
+  function openSkirmishMenu() {
+    clearBoardToMenu();
+    syncSkirmishUIButtons();
+    document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    document.getElementById('skirmishMenu').style.display = 'flex';
+  }
+
+  function isLevelUnlocked(idx) {
+    const lvl = CAMPAIGN_LEVELS[idx];
+    if (!lvl) return false;
+    if (ACT_CHECKPOINT_INDICES.has(idx)) return true;
+    if (adUnlockedLevels[lvl.id]) return true;
+    if (levelProgress[lvl.id] > 0) return true;
+    if (idx > 0 && levelProgress[CAMPAIGN_LEVELS[idx - 1].id] > 0) return true;
+    return false;
+  }
+
+  function renderCampaignGrid() {
+    const grid = document.getElementById('levelGrid');
+    grid.innerHTML = '';
+
+    let totalStars = 0;
+    CAMPAIGN_LEVELS.forEach(lvl => {
+      totalStars += (levelProgress[lvl.id] || 0);
+    });
+    const totalCountEl = document.getElementById('totalStarsCount');
+    if (totalCountEl) totalCountEl.textContent = totalStars;
+
+    const filteredLevels = CAMPAIGN_LEVELS.filter(lvl => {
+      if (activeActFilter === 'all') return true;
+      return String(lvl.act) === String(activeActFilter);
+    });
+
+    filteredLevels.forEach(lvl => {
+      const idx = CAMPAIGN_LEVELS.findIndex(l => l.id === lvl.id);
+      const card = document.createElement('div');
+      const stars = levelProgress[lvl.id] || 0;
+      const isUnlocked = isLevelUnlocked(idx);
+      const isActCheckpoint = ACT_CHECKPOINT_INDICES.has(idx);
+
+      card.className = `level-card ${isUnlocked ? '' : 'locked'}`;
+      const diffPillClass = campaignDifficulty === 'grandmaster' ? 'pill-grandmaster' : 'pill-tactical';
+      const diffLabel = campaignDifficulty === 'grandmaster' ? '💀 GM' : '⚔️ Tac';
+      const checkpointPill = isActCheckpoint ? `<span class="card-pill pill-checkpoint">🚩 Act Start</span>` : '';
+
+      const lockedFooterHtml = AdManager.rewardedAdsAvailable
+        ? `<span class="unlock-ad-pill">🎬 Unlock Province</span>`
+        : `<span class="locked-req-pill">🔒 Conquer Province ${idx} First</span>`;
+
+      card.innerHTML = `
+        <div>
+          <div class="level-title">
+            <span>${lvl.title}</span>
+            <span class="stars">${isUnlocked ? ('★'.repeat(stars) + '☆'.repeat(3 - stars)) : '🔒'}</span>
+          </div>
+          <div class="level-meta">
+            <span class="card-pill pill-act">${lvl.actIcon} ${lvl.actName}</span>
+            <span class="card-pill ${diffPillClass}">${diffLabel}</span>
+            ${checkpointPill}
+          </div>
+          <div class="level-desc">${lvl.desc}</div>
+        </div>
+        <div class="level-footer">
+          ${isUnlocked
+            ? `<span class="level-targets">⏱️ 3★: ≤${lvl.starTimes[0]}s | 2★: ≤${lvl.starTimes[1]}s</span>`
+            : lockedFooterHtml
+          }
+        </div>
+      `;
+
+      card.onclick = () => {
+        if (AdManager.adInProgress) return;
+        AudioEngine.init();
+        if (isUnlocked) {
+          currentCampaignIdx = idx;
+          aiDifficulty = campaignDifficulty;
+          startMatch('campaign', lvl.setup);
+        } else if (AdManager.rewardedAdsAvailable) {
+          AdManager.showRewardedAd(
+            () => {
+              saveAdUnlock(lvl.id);
+              showToast(`🔓 Unlocked ${lvl.title}!`);
+              renderCampaignGrid();
+              currentCampaignIdx = idx;
+              aiDifficulty = campaignDifficulty;
+              startMatch('campaign', lvl.setup);
+            },
+            () => {
+              showToast(`🔒 Complete Province ${idx} to unlock ${lvl.title}.`);
+            }
+          );
+        } else {
+          showToast(`🔒 Complete Province ${idx} to unlock ${lvl.title}.`);
+        }
+      };
+      grid.appendChild(card);
+    });
+  }
+
+  document.querySelectorAll('.camp-diff-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.camp-diff-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      campaignDifficulty = btn.dataset.diff;
+      renderCampaignGrid();
+    };
+  });
+
+  document.querySelectorAll('.act-tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.act-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeActFilter = btn.dataset.act;
+      renderCampaignGrid();
+    };
+  });
+
+  document.querySelectorAll('.skirmish-map-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.skirmish-map-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      skirmishMap = btn.dataset.map;
+    };
+  });
+
+  document.querySelectorAll('.ai-diff-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.ai-diff-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      aiDifficulty = btn.dataset.diff;
+    };
+  });
+
+  document.querySelectorAll('.map-size-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.map-size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      skirmishNodesCount = parseInt(btn.dataset.nodes, 10);
+    };
+  });
+
+  document.getElementById('skirmishStart').onclick = () => {
+    AudioEngine.init();
+    startMatch('skirmish', null);
+  };
+
+  document.getElementById('campaignBack').onclick = () => {
+    document.getElementById('campaignMenu').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'flex';
+  };
+
+  document.getElementById('skirmishBack').onclick = () => {
+    document.getElementById('skirmishMenu').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'flex';
+  };
+
+  document.getElementById('resetBtn').onclick = () => {
+    if (!AdManager.adInProgress) resetCurrentMatch();
+  };
+
+  const speedBtnEl = document.getElementById('speedBtn');
+  speedBtnEl.onclick = () => {
+    battleSpeed = battleSpeed === 1.0 ? 2.0 : 1.0;
+    speedBtnEl.textContent = `⏩ ${battleSpeed}x`;
+    speedBtnEl.classList.toggle('active', battleSpeed === 2.0);
+  };
+
+  document.getElementById('menuBtn').onclick = () => {
+    if (AdManager.adInProgress) return;
+    clearBoardToMenu();
+    document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    document.getElementById('mainMenu').style.display = 'flex';
+  };
+
+  function togglePause() {
+    if (!running || AdManager.adInProgress) return;
+    paused = !paused;
+    const pauseModal = document.getElementById('pauseModal');
+    if (paused) {
+      AdManager.gameplayStop();
+      pauseModal.style.display = 'flex';
+      document.getElementById('pauseSetupBtn').style.display = (mode === 'skirmish') ? 'inline-flex' : 'none';
+      document.getElementById('pauseNewRandomBtn').style.display = (mode === 'skirmish') ? 'inline-flex' : 'none';
+      document.getElementById('pauseBtn').textContent = 'Resume';
+    } else {
+      AdManager.gameplayStart();
+      pauseModal.style.display = 'none';
+      document.getElementById('pauseBtn').textContent = 'Pause';
+    }
+  }
+
+  document.getElementById('pauseBtn').onclick = togglePause;
+  document.getElementById('resumeBtn').onclick = togglePause;
+  document.getElementById('pauseRestartBtn').onclick = () => {
+    document.getElementById('pauseModal').style.display = 'none';
+    resetCurrentMatch();
+  };
+  document.getElementById('pauseNewRandomBtn').onclick = () => {
+    document.getElementById('pauseModal').style.display = 'none';
+    startMatch('skirmish', null);
+  };
+  document.getElementById('pauseSetupBtn').onclick = () => {
+    openSkirmishMenu();
+  };
+  document.getElementById('pauseHelpBtn').onclick = () => {
+    document.getElementById('pauseModal').style.display = 'none';
+    helpSource = 'pause';
+    document.getElementById('helpModal').style.display = 'flex';
+  };
+  document.getElementById('pauseMenuBtn').onclick = () => {
+    document.getElementById('pauseModal').style.display = 'none';
+    document.getElementById('menuBtn').click();
+  };
+
+  document.getElementById('helpCloseBtn').onclick = () => {
+    document.getElementById('helpModal').style.display = 'none';
+    if (helpSource === 'pause') {
+      document.getElementById('pauseModal').style.display = 'flex';
+    } else {
+      document.getElementById('mainMenu').style.display = 'flex';
+    }
+  };
+
+  document.getElementById('soundBtn').onclick = () => {
+    AudioEngine.init();
+    AudioEngine.enabled = !AudioEngine.enabled;
+    AudioEngine.syncState();
+    const muted = !AudioEngine.enabled;
+    document.getElementById('soundBtn').textContent = AudioEngine.enabled ? '🔊' : '🔇';
+    StorageManager.setItem('bastion_marshal_muted', String(muted));
+  };
+
+  const fsBtn = document.getElementById('fullscreenBtn');
+  if (fsBtn) {
+    // CrazyGames QA prohibits in-game fullscreen buttons inside portal iframes;
+    // keep it visible only when running standalone on Local PC.
+    if (window.self !== window.top) {
+      fsBtn.style.display = 'none';
+    } else {
+      fsBtn.onclick = () => {
+        const container = document.getElementById('container');
+        if (!document.fullscreenElement) {
+          if (container.requestFullscreen) container.requestFullscreen().catch(() => {});
+          else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+        } else {
+          if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
+      };
+      document.addEventListener('fullscreenchange', () => {
+        fsBtn.textContent = document.fullscreenElement ? '✖' : '⛶';
+        setTimeout(fitCanvas, 80);
+      });
+    }
+  }
+
+  document.getElementById('endRewardVanguardBtn').onclick = () => {
+    if (AdManager.adInProgress) return;
+    AudioEngine.init();
+    const isVictory = document.getElementById('endTitle').textContent === 'VICTORY';
+
+    const proceedToNextOrRetry = () => {
+      document.getElementById('endModal').style.display = 'none';
+      if (isVictory && mode === 'campaign' && currentCampaignIdx < CAMPAIGN_LEVELS.length - 1) {
+        currentCampaignIdx++;
+        const nextLvl = CAMPAIGN_LEVELS[currentCampaignIdx];
+        aiDifficulty = campaignDifficulty;
+        startMatch('campaign', nextLvl.setup);
+      } else if (isVictory && mode === 'skirmish') {
+        startMatch('skirmish', null);
+      } else {
+        resetCurrentMatch();
+      }
+    };
+
+    AdManager.showRewardedAd(
+      () => {
+        AdManager.hasVanguardBuff = true;
+        proceedToNextOrRetry();
+      },
+      (errCode) => {
+        // If ads are disabled in Basic Launch, do not leave the user stuck on a dead click;
+        // hide the rewarded button for future matches and proceed cleanly without the +25% buff.
+        if (errCode === 'adsDisabled') {
+          proceedToNextOrRetry();
+        } else {
+          showToast('⚠️ Rewarded video unavailable for this battle.');
+        }
+      }
+    );
+  };
+
+  document.getElementById('endMenuBtn').onclick = () => {
+    if (AdManager.adInProgress) return;
+    if (mode === 'campaign') {
+      openCampaignMenu();
+    } else {
+      document.getElementById('menuBtn').click();
+    }
+  };
+
+  document.getElementById('endSetupBtn').onclick = () => {
+    if (AdManager.adInProgress) return;
+    openSkirmishMenu();
+  };
+
+  document.getElementById('endRetryBtn').onclick = () => {
+    if (AdManager.adInProgress) return;
+    AdManager.maybeShowMidgameAd(() => {
+      document.getElementById('endModal').style.display = 'none';
+      resetCurrentMatch();
+    });
+  };
+
+  document.getElementById('endNewRandomBtn').onclick = () => {
+    if (AdManager.adInProgress) return;
+    AdManager.maybeShowMidgameAd(() => {
+      document.getElementById('endModal').style.display = 'none';
+      startMatch('skirmish', null);
+    });
+  };
+
+  document.getElementById('endNextBtn').onclick = () => {
+    if (AdManager.adInProgress) return;
+    AdManager.maybeShowMidgameAd(() => {
+      document.getElementById('endModal').style.display = 'none';
+      if (currentCampaignIdx < CAMPAIGN_LEVELS.length - 1) {
+        currentCampaignIdx++;
+        const nextLvl = CAMPAIGN_LEVELS[currentCampaignIdx];
+        aiDifficulty = campaignDifficulty;
+        startMatch('campaign', nextLvl.setup);
+      }
+    });
+  };
+
+  let resetConfirmPending = false;
+  const resetProgBtn = document.getElementById('resetProgressBtn');
+  resetProgBtn.onclick = () => {
+    if (!resetConfirmPending) {
+      resetConfirmPending = true;
+      resetProgBtn.textContent = '⚠️ Click Again to Confirm';
+      setTimeout(() => {
+        resetConfirmPending = false;
+        resetProgBtn.textContent = '🗑️ Reset Stars';
+      }, 3000);
+      return;
+    }
+    resetConfirmPending = false;
+    resetProgBtn.textContent = '🗑️ Reset Stars';
+    levelProgress = {};
+    adUnlockedLevels = {};
+    StorageManager.removeItem('bastion_marshal_progress');
+    StorageManager.removeItem('bastion_marshal_ad_unlocks');
+    renderCampaignGrid();
+    showToast('Campaign stars reset.');
+  };
+
+  // =================================================================
+  // 14. SYNCHRONOUS BOOTSTRAP
+  // =================================================================
+  loadSavedState();
+  fitCanvas();
+  requestAnimationFrame(gameLoop);
+  AdManager.init();
+})();
+</script>
+</body>
+</html>
